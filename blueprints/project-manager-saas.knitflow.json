@@ -1,0 +1,863 @@
+{
+  "schemaVersion": "1.0.0",
+  "project": {
+    "id": "proj-blueprint-project-manager-saas",
+    "name": "Blueprint - AI Project Manager SaaS",
+    "description": "Production-ready blueprint for a Next.js + Supabase collaborative project manager with AI workflows.",
+    "createdAt": "2026-02-15T10:00:00.000Z",
+    "updatedAt": "2026-02-15T10:00:00.000Z"
+  },
+  "ui": {
+    "themePreset": "light",
+    "edgeType": "smoothstep",
+    "direction": "TOP_DOWN",
+    "edgeDashed": false,
+    "hideEdgeLabels": false,
+    "showMiniMap": true
+  },
+  "pages": [
+    {
+      "id": "page-main-blueprint",
+      "name": "Project Manager Blueprint",
+      "viewport": {
+        "x": -330,
+        "y": -40,
+        "zoom": 0.7
+      },
+      "nodes": [
+        {
+          "id": "overview-1",
+          "type": "overview",
+          "position": {
+            "x": 520,
+            "y": 20
+          },
+          "stylePreset": "teal",
+          "data": {
+            "title": "Project Manager SaaS Overview",
+            "description": "AI-assisted collaborative project management with RBAC, kanban workflows, activity history, and integrated file storage.",
+            "stacks": [
+              "TypeScript",
+              "Next.js",
+              "Supabase",
+              "PostgreSQL",
+              "Docker",
+              "Nginx",
+              "Redis",
+              "VPS"
+            ],
+            "releaseDate": "Q4 2026"
+          }
+        },
+        {
+          "id": "spec-1",
+          "type": "spec",
+          "position": {
+            "x": 1080,
+            "y": 24
+          },
+          "stylePreset": "teal",
+          "data": {
+            "title": "Project details",
+            "body": "**Goal:** launch a lean but scalable PM platform.\n**Core:** workspace/team/role model, projects, tasks, comments, history.\n**Auth:** email OTP + GitHub + Google sign-in and registration.\n**Platform:** VPS + Nginx + Docker + Supabase cloud data layer."
+          }
+        },
+        {
+          "id": "comment-1",
+          "type": "comment",
+          "position": {
+            "x": 1080,
+            "y": 224
+          },
+          "stylePreset": "grey",
+          "data": {
+            "title": "Design direction",
+            "body": "Postman note:\n- Use workspace-scoped tokens for `/auth/*` routes.\n- Keep OTP flow and OAuth callback in the same environment collection.",
+            "attachedTo": "service-auth"
+          }
+        },
+        {
+          "id": "milestone-1",
+          "type": "milestone",
+          "position": {
+            "x": -240,
+            "y": 320
+          },
+          "stylePreset": "red",
+          "data": {
+            "title": "Auth + Workspace Foundation",
+            "milestoneLabel": "Milestone 1",
+            "order": 1,
+            "goal": "Ship secure auth, registration, OTP verification, and workspace/team primitives.",
+            "dueDate": "2026-05-15",
+            "priority": "high"
+          }
+        },
+        {
+          "id": "milestone-2",
+          "type": "milestone",
+          "position": {
+            "x": -240,
+            "y": 520
+          },
+          "stylePreset": "red",
+          "data": {
+            "title": "Projects + Roles + Team Operations",
+            "milestoneLabel": "Milestone 2",
+            "order": 2,
+            "goal": "Deliver project lifecycle with role-based access and team assignment flows.",
+            "dueDate": "2026-06-20",
+            "priority": "high"
+          }
+        },
+        {
+          "id": "milestone-3",
+          "type": "milestone",
+          "position": {
+            "x": -240,
+            "y": 720
+          },
+          "stylePreset": "red",
+          "data": {
+            "title": "Kanban + Comments + Activity History",
+            "milestoneLabel": "Milestone 3",
+            "order": 3,
+            "goal": "Complete task boards, comments, and project-level audit/event history.",
+            "dueDate": "2026-08-01",
+            "priority": "medium"
+          }
+        },
+        {
+          "id": "milestone-4",
+          "type": "milestone",
+          "position": {
+            "x": -240,
+            "y": 920
+          },
+          "stylePreset": "red",
+          "data": {
+            "title": "AI Workflows + Integrations + File Storage",
+            "milestoneLabel": "Milestone 4",
+            "order": 4,
+            "goal": "Enable AI-assisted planning, external notifications, and production-ready file storage.",
+            "dueDate": "2026-09-12",
+            "priority": "critical"
+          }
+        },
+        {
+          "id": "infra-1",
+          "type": "infra",
+          "position": {
+            "x": 120,
+            "y": 120
+          },
+          "stylePreset": "orange",
+          "data": {
+            "name": "Production Runtime",
+            "provider": "VPS + Nginx + Docker",
+            "notes": "Single VPS entrypoint with TLS termination in Nginx and containerized app services."
+          }
+        },
+        {
+          "id": "framework-1",
+          "type": "framework",
+          "position": {
+            "x": 460,
+            "y": 120
+          },
+          "stylePreset": "blue",
+          "data": {
+            "name": "Web Platform",
+            "framework": "Next.js",
+            "notes": "App Router based frontend with server actions for selected admin operations."
+          }
+        },
+        {
+          "id": "database-1",
+          "type": "database",
+          "position": {
+            "x": 800,
+            "y": 120
+          },
+          "stylePreset": "green",
+          "data": {
+            "name": "Primary Data Platform",
+            "dbType": "supabase",
+            "connectionNotes": "Supabase Cloud with Postgres + Auth + Storage + RLS.",
+            "schemaNotes": "users: uuid pk, email text unique, full_name text\nworkspaces: uuid pk, owner_id uuid fk users.id, name text\nworkspace_members: uuid pk, workspace_id uuid fk workspaces.id, user_id uuid fk users.id, role text\nprojects: uuid pk, workspace_id uuid fk workspaces.id, name text, status text\ntasks: uuid pk, project_id uuid fk projects.id, assignee_id uuid fk users.id, title text, status text, priority text\ncomments: uuid pk, task_id uuid fk tasks.id, author_id uuid fk users.id, body text\nactivity_logs: uuid pk, project_id uuid fk projects.id, actor_id uuid fk users.id, event_type text, payload jsonb\nattachments: uuid pk, task_id uuid fk tasks.id, storage_path text",
+            "dbSchemaExpanded": false
+          }
+        },
+        {
+          "id": "service-auth",
+          "type": "service",
+          "position": {
+            "x": 460,
+            "y": 320
+          },
+          "stylePreset": "blue",
+          "data": {
+            "name": "Auth API",
+            "tag": "Auth",
+            "description": "Handles signup/login, email OTP verification, and OAuth sign-in (GitHub + Google).",
+            "endpoints": [
+              {
+                "id": "auth-register",
+                "method": "POST",
+                "route": "/auth/register"
+              },
+              {
+                "id": "auth-login",
+                "method": "POST",
+                "route": "/auth/login"
+              },
+              {
+                "id": "auth-verify-otp",
+                "method": "POST",
+                "route": "/auth/verify-otp"
+              },
+              {
+                "id": "auth-oauth-callback",
+                "method": "GET",
+                "route": "/auth/oauth/callback"
+              }
+            ],
+            "notes": "Internal note: passwordless-ready implementation path."
+          }
+        },
+        {
+          "id": "service-workspace",
+          "type": "service",
+          "position": {
+            "x": 460,
+            "y": 520
+          },
+          "stylePreset": "blue",
+          "data": {
+            "name": "Workspace API",
+            "tag": "Core",
+            "description": "Creates workspaces, team memberships, and enforces role scopes.",
+            "endpoints": [
+              {
+                "id": "workspace-create",
+                "method": "POST",
+                "route": "/workspaces"
+              },
+              {
+                "id": "workspace-members",
+                "method": "GET",
+                "route": "/workspaces/:id/members"
+              },
+              {
+                "id": "workspace-invite",
+                "method": "POST",
+                "route": "/workspaces/:id/invitations"
+              }
+            ],
+            "notes": "Internal note: owners/admins can manage roles."
+          }
+        },
+        {
+          "id": "service-project",
+          "type": "service",
+          "position": {
+            "x": 460,
+            "y": 720
+          },
+          "stylePreset": "blue",
+          "data": {
+            "name": "Project API",
+            "tag": "Core",
+            "description": "Manages projects, client/lead assignments, and project metadata.",
+            "endpoints": [
+              {
+                "id": "project-create",
+                "method": "POST",
+                "route": "/projects"
+              },
+              {
+                "id": "project-list",
+                "method": "GET",
+                "route": "/workspaces/:id/projects"
+              },
+              {
+                "id": "project-update",
+                "method": "PATCH",
+                "route": "/projects/:id"
+              }
+            ],
+            "notes": "Internal note: flexible status model for delivery pipelines."
+          }
+        },
+        {
+          "id": "service-task",
+          "type": "service",
+          "position": {
+            "x": 460,
+            "y": 920
+          },
+          "stylePreset": "blue",
+          "data": {
+            "name": "Task API",
+            "tag": "Workflow",
+            "description": "Owns kanban columns, task CRUD, comments, and project activity timeline events.",
+            "endpoints": [
+              {
+                "id": "task-create",
+                "method": "POST",
+                "route": "/projects/:id/tasks"
+              },
+              {
+                "id": "task-move",
+                "method": "PATCH",
+                "route": "/tasks/:id/status"
+              },
+              {
+                "id": "task-comment",
+                "method": "POST",
+                "route": "/tasks/:id/comments"
+              },
+              {
+                "id": "project-activity",
+                "method": "GET",
+                "route": "/projects/:id/activity"
+              }
+            ],
+            "notes": "Internal note: events emitted for automation and notifications."
+          }
+        },
+        {
+          "id": "service-notify",
+          "type": "service",
+          "position": {
+            "x": 1160,
+            "y": 1120
+          },
+          "stylePreset": "purple",
+          "data": {
+            "name": "Notification Gateway",
+            "tag": "External",
+            "description": "Routes important events to collaboration channels (Slack / Discord).",
+            "endpoints": [
+              {
+                "id": "notify-channel",
+                "method": "POST",
+                "route": "/notifications/channel"
+              },
+              {
+                "id": "notify-project",
+                "method": "POST",
+                "route": "/notifications/project"
+              }
+            ],
+            "notes": "Internal note: batched delivery for noisy projects."
+          }
+        },
+        {
+          "id": "service-file",
+          "type": "service",
+          "position": {
+            "x": 820,
+            "y": 720
+          },
+          "stylePreset": "teal",
+          "data": {
+            "name": "File Storage API",
+            "tag": "Storage",
+            "description": "Handles file uploads, attachment linking to tasks, and secure download URLs.",
+            "endpoints": [
+              {
+                "id": "file-upload",
+                "method": "POST",
+                "route": "/files/upload"
+              },
+              {
+                "id": "file-link",
+                "method": "POST",
+                "route": "/tasks/:id/attachments"
+              },
+              {
+                "id": "file-signed-url",
+                "method": "GET",
+                "route": "/files/:id/signed-url"
+              }
+            ],
+            "notes": "Internal note: enforce workspace-level file isolation."
+          }
+        },
+        {
+          "id": "service-ai",
+          "type": "service",
+          "position": {
+            "x": 820,
+            "y": 920
+          },
+          "stylePreset": "teal",
+          "data": {
+            "name": "AI Assistant API",
+            "tag": "AI",
+            "description": "Provides task drafting, project summaries, and priority suggestions from workspace data.",
+            "endpoints": [
+              {
+                "id": "ai-plan",
+                "method": "POST",
+                "route": "/ai/plan"
+              },
+              {
+                "id": "ai-summarize",
+                "method": "POST",
+                "route": "/ai/summarize"
+              },
+              {
+                "id": "ai-task-suggest",
+                "method": "POST",
+                "route": "/ai/tasks/suggest"
+              }
+            ],
+            "notes": "Internal note: prompt and policy versioning required."
+          }
+        },
+        {
+          "id": "action-role-sync",
+          "type": "action",
+          "position": {
+            "x": 120,
+            "y": 520
+          },
+          "stylePreset": "purple",
+          "data": {
+            "name": "Role Sync",
+            "tag": "Access",
+            "comment": "Propagate role updates to workspace member records and cache."
+          }
+        },
+        {
+          "id": "action-kanban-rules",
+          "type": "action",
+          "position": {
+            "x": 120,
+            "y": 920
+          },
+          "stylePreset": "purple",
+          "data": {
+            "name": "Kanban Transition Rules",
+            "tag": "Workflow",
+            "comment": "Validate allowed status transitions and assignment constraints."
+          }
+        },
+        {
+          "id": "action-audit-log",
+          "type": "action",
+          "position": {
+            "x": 120,
+            "y": 1100
+          },
+          "stylePreset": "purple",
+          "data": {
+            "name": "Audit Logger",
+            "tag": "Compliance",
+            "comment": "Record project-level activity events for full traceability."
+          }
+        },
+        {
+          "id": "action-webhook-dispatch",
+          "type": "action",
+          "position": {
+            "x": 820,
+            "y": 1120
+          },
+          "stylePreset": "purple",
+          "data": {
+            "name": "Webhook Dispatcher",
+            "tag": "Automation",
+            "comment": "Converts domain events into outbound notification payloads."
+          }
+        },
+        {
+          "id": "code-auth-contract",
+          "type": "code",
+          "position": {
+            "x": 1160,
+            "y": 620
+          },
+          "stylePreset": "grey",
+          "data": {
+            "title": "Auth API contract",
+            "language": "json",
+            "expanded": false,
+            "content": "{\n  \"register\": {\n    \"email\": \"string\",\n    \"password\": \"string\",\n    \"name\": \"string\"\n  },\n  \"verifyOtp\": {\n    \"email\": \"string\",\n    \"otp\": \"string\"\n  },\n  \"session\": {\n    \"accessToken\": \"jwt\",\n    \"refreshToken\": \"jwt\"\n  }\n}"
+          }
+        },
+        {
+          "id": "code-task-schema",
+          "type": "code",
+          "position": {
+            "x": 1160,
+            "y": 820
+          },
+          "stylePreset": "grey",
+          "data": {
+            "title": "Task payload schema",
+            "language": "json",
+            "expanded": false,
+            "content": "{\n  \"task\": {\n    \"id\": \"uuid\",\n    \"projectId\": \"uuid\",\n    \"title\": \"string\",\n    \"status\": \"todo|in_progress|review|done\",\n    \"priority\": \"low|medium|high|critical\",\n    \"assigneeId\": \"uuid|null\"\n  },\n  \"comment\": {\n    \"id\": \"uuid\",\n    \"taskId\": \"uuid\",\n    \"authorId\": \"uuid\",\n    \"body\": \"string\"\n  }\n}"
+          }
+        },
+        {
+          "id": "code-ai-flow",
+          "type": "code",
+          "position": {
+            "x": 1160,
+            "y": 1320
+          },
+          "stylePreset": "grey",
+          "data": {
+            "title": "AI planning flow",
+            "language": "typescript",
+            "expanded": false,
+            "content": "type AiPlanInput = { workspaceId: string; projectId: string; objective: string };\n\nexport async function buildPlan(input: AiPlanInput) {\n  const context = await fetchProjectContext(input.projectId);\n  const prompt = composePrompt(input.objective, context);\n  return runModel({\n    task: 'project-plan',\n    prompt,\n    safety: 'team-default',\n  });\n}"
+          }
+        },
+        {
+          "id": "router-task-events",
+          "type": "router",
+          "position": {
+            "x": 660,
+            "y": 1020
+          },
+          "stylePreset": "teal",
+          "data": {
+            "name": "Task Event Router",
+            "tag": "Fan-out",
+            "inputCount": 1,
+            "outputCount": 3,
+            "notes": "Splits task domain events to AI, notifications, and milestone delivery routing."
+          }
+        },
+        {
+          "id": "stack-auth-providers",
+          "type": "stack",
+          "position": {
+            "x": 1360,
+            "y": 320
+          },
+          "stylePreset": "purple",
+          "data": {
+            "name": "Auth Providers Stack",
+            "summary": "Collapsed OAuth providers (GitHub + Google).",
+            "activeIndex": 0,
+            "items": [
+              {
+                "id": "integration-github",
+                "type": "integration",
+                "name": "GitHub",
+                "tag": "OAuth2",
+                "title": "GitHub"
+              },
+              {
+                "id": "integration-google",
+                "type": "integration",
+                "name": "Google",
+                "tag": "OAuth2",
+                "title": "Google"
+              }
+            ]
+          }
+        },
+        {
+          "id": "stack-notify-channels",
+          "type": "stack",
+          "position": {
+            "x": 1520,
+            "y": 1120
+          },
+          "stylePreset": "purple",
+          "data": {
+            "name": "Notify Channels Stack",
+            "summary": "Collapsed outbound channels (Slack + Discord).",
+            "activeIndex": 0,
+            "items": [
+              {
+                "id": "integration-slack",
+                "type": "integration",
+                "name": "Slack",
+                "tag": "Bot Token (OAuth2)",
+                "title": "Slack"
+              },
+              {
+                "id": "integration-discord",
+                "type": "integration",
+                "name": "Discord",
+                "tag": "Bot Token",
+                "title": "Discord"
+              }
+            ]
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "e-1",
+          "source": "infra-1",
+          "target": "framework-1",
+          "type": "smoothstep",
+          "label": "runtime"
+        },
+        {
+          "id": "e-2",
+          "source": "infra-1",
+          "target": "database-1",
+          "type": "smoothstep",
+          "label": "hosted data"
+        },
+        {
+          "id": "e-3",
+          "source": "framework-1",
+          "target": "service-auth",
+          "type": "smoothstep",
+          "label": "auth UI"
+        },
+        {
+          "id": "e-4",
+          "source": "framework-1",
+          "target": "service-workspace",
+          "type": "smoothstep",
+          "label": "workspace UI"
+        },
+        {
+          "id": "e-5",
+          "source": "framework-1",
+          "target": "service-project",
+          "type": "smoothstep",
+          "label": "project UI"
+        },
+        {
+          "id": "e-6",
+          "source": "framework-1",
+          "target": "service-task",
+          "type": "smoothstep",
+          "label": "kanban UI"
+        },
+        {
+          "id": "e-7",
+          "source": "database-1",
+          "target": "service-auth",
+          "type": "smoothstep",
+          "label": "users + sessions"
+        },
+        {
+          "id": "e-8",
+          "source": "database-1",
+          "target": "service-workspace",
+          "type": "smoothstep",
+          "label": "workspaces + team"
+        },
+        {
+          "id": "e-9",
+          "source": "database-1",
+          "target": "service-project",
+          "type": "smoothstep",
+          "label": "projects"
+        },
+        {
+          "id": "e-10",
+          "source": "database-1",
+          "target": "service-task",
+          "type": "smoothstep",
+          "label": "tasks + comments"
+        },
+        {
+          "id": "e-11",
+          "source": "service-auth",
+          "target": "service-workspace",
+          "type": "smoothstep",
+          "label": "org context"
+        },
+        {
+          "id": "e-12",
+          "source": "service-workspace",
+          "target": "service-project",
+          "type": "smoothstep",
+          "label": "workspace scope"
+        },
+        {
+          "id": "e-13",
+          "source": "service-project",
+          "target": "service-task",
+          "type": "smoothstep",
+          "label": "project tasks"
+        },
+        {
+          "id": "e-14",
+          "source": "service-auth",
+          "target": "action-role-sync",
+          "type": "smoothstep",
+          "label": "role grants"
+        },
+        {
+          "id": "e-15",
+          "source": "action-role-sync",
+          "target": "service-workspace",
+          "type": "smoothstep",
+          "label": "sync membership"
+        },
+        {
+          "id": "e-16",
+          "source": "service-task",
+          "target": "action-kanban-rules",
+          "type": "smoothstep",
+          "label": "status transition"
+        },
+        {
+          "id": "e-17",
+          "source": "action-kanban-rules",
+          "target": "action-audit-log",
+          "type": "smoothstep",
+          "label": "emit event"
+        },
+        {
+          "id": "e-18",
+          "source": "action-audit-log",
+          "target": "database-1",
+          "type": "smoothstep",
+          "label": "append activity_logs"
+        },
+        {
+          "id": "e-19",
+          "source": "service-task",
+          "target": "service-file",
+          "type": "smoothstep",
+          "label": "task attachments"
+        },
+        {
+          "id": "e-20",
+          "source": "service-project",
+          "target": "service-file",
+          "type": "smoothstep",
+          "label": "project assets"
+        },
+        {
+          "id": "e-23",
+          "source": "action-webhook-dispatch",
+          "target": "service-notify",
+          "type": "smoothstep",
+          "label": "outbound payload"
+        },
+        {
+          "id": "e-28",
+          "source": "service-auth",
+          "target": "code-auth-contract",
+          "type": "smoothstep",
+          "label": "contract"
+        },
+        {
+          "id": "e-29",
+          "source": "service-task",
+          "target": "code-task-schema",
+          "type": "smoothstep",
+          "label": "schema"
+        },
+        {
+          "id": "e-30",
+          "source": "service-ai",
+          "target": "code-ai-flow",
+          "type": "smoothstep",
+          "label": "implementation"
+        },
+        {
+          "id": "e-31",
+          "source": "service-auth",
+          "target": "milestone-1",
+          "type": "smoothstep",
+          "label": "deliverable"
+        },
+        {
+          "id": "e-32",
+          "source": "service-workspace",
+          "target": "milestone-1",
+          "type": "smoothstep",
+          "label": "deliverable"
+        },
+        {
+          "id": "e-33",
+          "source": "service-project",
+          "target": "milestone-2",
+          "type": "smoothstep",
+          "label": "deliverable"
+        },
+        {
+          "id": "e-34",
+          "source": "service-task",
+          "target": "milestone-3",
+          "type": "smoothstep",
+          "label": "deliverable"
+        },
+        {
+          "id": "e-35",
+          "source": "action-audit-log",
+          "target": "milestone-3",
+          "type": "smoothstep",
+          "label": "deliverable"
+        },
+        {
+          "id": "e-36",
+          "source": "service-ai",
+          "target": "milestone-4",
+          "type": "smoothstep",
+          "label": "deliverable"
+        },
+        {
+          "id": "e-37",
+          "source": "service-notify",
+          "target": "milestone-4",
+          "type": "smoothstep",
+          "label": "deliverable"
+        },
+        {
+          "id": "e-38",
+          "source": "service-file",
+          "target": "milestone-4",
+          "type": "smoothstep",
+          "label": "deliverable"
+        },
+        {
+          "id": "e-39",
+          "source": "service-task",
+          "target": "router-task-events",
+          "type": "smoothstep",
+          "label": "task event stream"
+        },
+        {
+          "id": "e-40",
+          "source": "router-task-events",
+          "target": "service-ai",
+          "type": "smoothstep",
+          "label": "assistant context"
+        },
+        {
+          "id": "e-41",
+          "source": "router-task-events",
+          "target": "action-webhook-dispatch",
+          "type": "smoothstep",
+          "label": "outbound events"
+        },
+        {
+          "id": "e-42",
+          "source": "service-auth",
+          "target": "stack-auth-providers",
+          "type": "smoothstep",
+          "label": "oauth providers"
+        },
+        {
+          "id": "e-43",
+          "source": "service-notify",
+          "target": "stack-notify-channels",
+          "type": "smoothstep",
+          "label": "delivery channels"
+        }
+      ]
+    }
+  ]
+}
+
+

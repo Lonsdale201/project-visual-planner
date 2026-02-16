@@ -1,0 +1,401 @@
+{
+  "schemaVersion": "1.0.0",
+  "project": {
+    "id": "proj-blueprint-ai-api-starter",
+    "name": "Blueprint - AI API Starter",
+    "description": "Lean AI-enabled API product starter with auth, core API, database, and one external integration.",
+    "createdAt": "2026-02-15T10:00:00.000Z",
+    "updatedAt": "2026-02-15T10:00:00.000Z"
+  },
+  "ui": {
+    "themePreset": "light",
+    "edgeType": "smoothstep",
+    "direction": "TOP_DOWN",
+    "edgeDashed": false,
+    "hideEdgeLabels": false,
+    "showMiniMap": true
+  },
+  "pages": [
+    {
+      "id": "page-ai-api-starter",
+      "name": "AI API Starter",
+      "viewport": {
+        "x": -100,
+        "y": -30,
+        "zoom": 0.86
+      },
+      "nodes": [
+        {
+          "id": "overview-1",
+          "type": "overview",
+          "position": {
+            "x": 460,
+            "y": 20
+          },
+          "stylePreset": "teal",
+          "data": {
+            "title": "AI API Starter Overview",
+            "description": "Fast-launch starter: auth, core API, database, AI endpoint, and Slack notifications.",
+            "stacks": [
+              "TypeScript",
+              "Node.js",
+              "PostgreSQL",
+              "Docker"
+            ],
+            "releaseDate": "Q3 2026"
+          }
+        },
+        {
+          "id": "milestone-1",
+          "type": "milestone",
+          "position": {
+            "x": 40,
+            "y": 320
+          },
+          "stylePreset": "red",
+          "data": {
+            "title": "Core API + Auth",
+            "milestoneLabel": "Milestone 1",
+            "order": 1,
+            "goal": "Implement auth and secure core endpoints.",
+            "dueDate": "2026-05-10",
+            "priority": "high"
+          }
+        },
+        {
+          "id": "service-auth",
+          "type": "service",
+          "position": {
+            "x": 420,
+            "y": 320
+          },
+          "stylePreset": "blue",
+          "data": {
+            "name": "Auth API",
+            "tag": "Auth",
+            "description": "Handles registration, login, and token lifecycle.",
+            "endpoints": [
+              {
+                "id": "register",
+                "method": "POST",
+                "route": "/auth/register"
+              },
+              {
+                "id": "login",
+                "method": "POST",
+                "route": "/auth/login"
+              }
+            ],
+            "notes": "Internal note"
+          }
+        },
+        {
+          "id": "service-core",
+          "type": "service",
+          "position": {
+            "x": 420,
+            "y": 520
+          },
+          "stylePreset": "blue",
+          "data": {
+            "name": "Core API",
+            "tag": "Core",
+            "description": "Main business endpoints consumed by web clients.",
+            "endpoints": [
+              {
+                "id": "items-get",
+                "method": "GET",
+                "route": "/items"
+              },
+              {
+                "id": "items-post",
+                "method": "POST",
+                "route": "/items"
+              }
+            ],
+            "notes": "Internal note"
+          }
+        },
+        {
+          "id": "service-ai",
+          "type": "service",
+          "position": {
+            "x": 760,
+            "y": 520
+          },
+          "stylePreset": "teal",
+          "data": {
+            "name": "AI API",
+            "tag": "AI",
+            "description": "Generates summaries and recommendations.",
+            "endpoints": [
+              {
+                "id": "ai-summarize",
+                "method": "POST",
+                "route": "/ai/summarize"
+              }
+            ],
+            "notes": "Internal note"
+          }
+        },
+        {
+          "id": "database-1",
+          "type": "database",
+          "position": {
+            "x": 760,
+            "y": 320
+          },
+          "stylePreset": "green",
+          "data": {
+            "name": "Primary Database",
+            "dbType": "postgres",
+            "connectionNotes": "Managed Postgres",
+            "schemaNotes": "users: uuid pk, email text unique\nitems: uuid pk, owner_id uuid fk users.id, title text",
+            "dbSchemaExpanded": false
+          }
+        },
+        {
+          "id": "action-notify",
+          "type": "action",
+          "position": {
+            "x": 1100,
+            "y": 320
+          },
+          "stylePreset": "purple",
+          "data": {
+            "name": "Notify Channel",
+            "tag": "Automation",
+            "comment": "Dispatch outbound notification event"
+          }
+        },
+        {
+          "id": "infra-1",
+          "type": "infra",
+          "position": {
+            "x": 40,
+            "y": 120
+          },
+          "stylePreset": "orange",
+          "data": {
+            "name": "Runtime Host",
+            "provider": "Docker VPS",
+            "notes": "Container host for API services."
+          }
+        },
+        {
+          "id": "framework-1",
+          "type": "framework",
+          "position": {
+            "x": 420,
+            "y": 120
+          },
+          "stylePreset": "blue",
+          "data": {
+            "name": "API Framework",
+            "framework": "Express.js",
+            "notes": "REST routing with middleware pipeline."
+          }
+        },
+        {
+          "id": "spec-1",
+          "type": "spec",
+          "position": {
+            "x": 760,
+            "y": 20
+          },
+          "stylePreset": "teal",
+          "data": {
+            "title": "Project details",
+            "body": "**Goal:** ship a lean AI-ready API starter.\n**Scope:** auth, core CRUD, notifications, and observability-ready structure."
+          }
+        },
+        {
+          "id": "comment-1",
+          "type": "comment",
+          "position": {
+            "x": 1100,
+            "y": 20
+          },
+          "stylePreset": "grey",
+          "data": {
+            "title": "Design direction",
+            "body": "Testing hint:\n- Validate auth middleware before `POST /items`.\n- Keep AI endpoint payload snapshots in Postman examples.",
+            "attachedTo": "service-core"
+          }
+        },
+        {
+          "id": "code-contract-1",
+          "type": "code",
+          "position": {
+            "x": 1100,
+            "y": 720
+          },
+          "stylePreset": "grey",
+          "data": {
+            "title": "Core API payload",
+            "language": "json",
+            "expanded": false,
+            "content": "{\n  \"item\": {\n    \"id\": \"uuid\",\n    \"title\": \"string\",\n    \"status\": \"todo|done\",\n    \"ownerId\": \"uuid\"\n  }\n}"
+          }
+        },
+        {
+          "id": "router-core-events",
+          "type": "router",
+          "position": {
+            "x": 760,
+            "y": 620
+          },
+          "stylePreset": "teal",
+          "data": {
+            "name": "Core Event Router",
+            "tag": "Fan-out",
+            "inputCount": 1,
+            "outputCount": 2,
+            "notes": "Routes core domain events into AI and notification branches."
+          }
+        },
+        {
+          "id": "stack-channels",
+          "type": "stack",
+          "position": {
+            "x": 1100,
+            "y": 520
+          },
+          "stylePreset": "purple",
+          "data": {
+            "name": "Channel Stack",
+            "summary": "Collapsed outbound channels.",
+            "activeIndex": 0,
+            "items": [
+              {
+                "id": "integration-slack",
+                "type": "integration",
+                "name": "Slack",
+                "tag": "Bot Token",
+                "title": "Slack"
+              }
+            ]
+          }
+        },
+        {
+          "id": "integration-statuspage",
+          "type": "integration",
+          "position": {
+            "x": 1260,
+            "y": 520
+          },
+          "stylePreset": "purple",
+          "data": {
+            "name": "Statuspage",
+            "boundary": "external",
+            "baseUrl": "https://api.statuspage.io",
+            "authMethod": "API Key",
+            "requestNotes": "Optional public incident updates"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "e-1",
+          "source": "infra-1",
+          "target": "framework-1",
+          "type": "smoothstep",
+          "label": "runtime"
+        },
+        {
+          "id": "e-2",
+          "source": "framework-1",
+          "target": "service-auth",
+          "type": "smoothstep",
+          "label": "routing"
+        },
+        {
+          "id": "e-3",
+          "source": "framework-1",
+          "target": "service-core",
+          "type": "smoothstep",
+          "label": "routing"
+        },
+        {
+          "id": "e-4",
+          "source": "service-auth",
+          "target": "milestone-1",
+          "type": "smoothstep",
+          "label": "deliverable"
+        },
+        {
+          "id": "e-5",
+          "source": "service-core",
+          "target": "milestone-1",
+          "type": "smoothstep",
+          "label": "deliverable"
+        },
+        {
+          "id": "e-6",
+          "source": "service-auth",
+          "target": "service-core",
+          "type": "smoothstep",
+          "label": "session context"
+        },
+        {
+          "id": "e-7",
+          "source": "database-1",
+          "target": "service-auth",
+          "type": "smoothstep",
+          "label": "users"
+        },
+        {
+          "id": "e-8",
+          "source": "database-1",
+          "target": "service-core",
+          "type": "smoothstep",
+          "label": "entities"
+        },
+        {
+          "id": "e-12",
+          "source": "service-core",
+          "target": "code-contract-1",
+          "type": "smoothstep",
+          "label": "schema"
+        },
+        {
+          "id": "e-13",
+          "source": "service-core",
+          "target": "router-core-events",
+          "type": "smoothstep",
+          "label": "domain event stream"
+        },
+        {
+          "id": "e-14",
+          "source": "router-core-events",
+          "target": "service-ai",
+          "type": "smoothstep",
+          "label": "assistant context"
+        },
+        {
+          "id": "e-15",
+          "source": "router-core-events",
+          "target": "action-notify",
+          "type": "smoothstep",
+          "label": "notify branch"
+        },
+        {
+          "id": "e-16",
+          "source": "action-notify",
+          "target": "stack-channels",
+          "type": "smoothstep",
+          "label": "channel alert"
+        },
+        {
+          "id": "e-17",
+          "source": "action-notify",
+          "target": "integration-statuspage",
+          "type": "smoothstep",
+          "label": "optional status sync"
+        }
+      ]
+    }
+  ]
+}
+
+

@@ -1,0 +1,44 @@
+.kf-flow .react-flow__handle.kf-handle {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 4px rgba(25, 118, 210, 0.2);
+  transition: box-shadow 120ms ease, background-color 120ms ease;
+}
+
+.kf-flow .react-flow__handle.kf-handle:hover {
+  box-shadow: 0 0 0 5px rgba(25, 118, 210, 0.35);
+}
+
+.kf-flow .react-flow__handle.kf-handle.react-flow__handle-connecting {
+  box-shadow: 0 0 0 6px rgba(25, 118, 210, 0.4);
+}
+
+.kf-flow .react-flow__handle.kf-handle.react-flow__handle-valid {
+  background: #2e7d32 !important;
+  box-shadow: 0 0 0 6px rgba(46, 125, 50, 0.3);
+}
+
+.kf-flow .react-flow__connectionline path {
+  stroke: #8fa5bc;
+  stroke-width: 2.4px;
+}
+
+.kf-flow .react-flow__edge-path {
+  stroke: #8fa5bc;
+  stroke-width: 2.2px;
+}
+
+.kf-flow .react-flow__edge.selected .react-flow__edge-path,
+.kf-flow .react-flow__edge:focus-visible .react-flow__edge-path {
+  stroke: #2b8f6a;
+  stroke-width: 2.8px;
+}
+
+.kf-flow.kf-flow-dashed .react-flow__connectionline path {
+  stroke-dasharray: 8 6;
+}
+
+.kf-flow.kf-flow-dashed .react-flow__edge-path {
+  stroke-dasharray: 8 6;
+}

@@ -1,0 +1,417 @@
+{
+  "schemaVersion": "1.0.0",
+  "project": {
+    "id": "proj-blueprint-wp-lms-plugin",
+    "name": "Blueprint - WordPress LMS Plugin",
+    "description": "Custom WordPress LMS plugin blueprint with CRUD tables, ORM, DTO/Presenter patterns, payment, and notification flows.",
+    "createdAt": "2026-02-15T10:00:00.000Z",
+    "updatedAt": "2026-02-15T10:00:00.000Z"
+  },
+  "ui": {
+    "themePreset": "light",
+    "edgeType": "smoothstep",
+    "direction": "TOP_DOWN",
+    "edgeDashed": false,
+    "hideEdgeLabels": false,
+    "showMiniMap": true
+  },
+  "pages": [
+    {
+      "id": "page-wp-lms-plugin",
+      "name": "WP LMS Plugin Blueprint",
+      "viewport": {
+        "x": -120,
+        "y": -40,
+        "zoom": 0.82
+      },
+      "nodes": [
+        {
+          "id": "overview-1",
+          "type": "overview",
+          "position": { "x": 500, "y": 20 },
+          "stylePreset": "teal",
+          "data": {
+            "title": "WordPress LMS Plugin Overview",
+            "description": "Feature-complete LMS plugin architecture for WordPress with modular domain services, custom table CRUD, and external integrations.",
+            "stacks": ["PHP", "WordPress", "MySQL", "REST API", "WP-CLI", "Docker"],
+            "releaseDate": "Q1 2027"
+          }
+        },
+        {
+          "id": "spec-1",
+          "type": "spec",
+          "position": { "x": 900, "y": 24 },
+          "stylePreset": "teal",
+          "data": {
+            "title": "Project details",
+            "body": "**Goal:** ship a production-ready custom LMS plugin.\n**Data model:** custom tables for courses, modules, lessons, enrollments, attempts, certificates.\n**Architecture:** split admin hooks, student API, and async jobs into separate flows.\n**Patterns:** ORM + DTO + Presenter for clean boundaries."
+          }
+        },
+        {
+          "id": "comment-1",
+          "type": "comment",
+          "position": { "x": 900, "y": 224 },
+          "stylePreset": "grey",
+          "data": {
+            "title": "Implementation note",
+            "body": "Postman setup:\n- Auth as WP Application Password or JWT plugin.\n- Keep `student`, `instructor`, `admin` environment presets.",
+            "attachedTo": "service-lms-api"
+          }
+        },
+        {
+          "id": "infra-1",
+          "type": "infra",
+          "position": { "x": 100, "y": 120 },
+          "stylePreset": "orange",
+          "data": {
+            "name": "Runtime",
+            "provider": "WordPress + Nginx + Docker",
+            "notes": "Plugin packaged as Composer-ready module with separate local dev containers."
+          }
+        },
+        {
+          "id": "framework-1",
+          "type": "framework",
+          "position": { "x": 400, "y": 120 },
+          "stylePreset": "blue",
+          "data": {
+            "name": "Plugin Framework",
+            "framework": "WordPress 6.x",
+            "notes": "Hooks + REST controllers + WP-CLI command surface."
+          }
+        },
+        {
+          "id": "database-1",
+          "type": "database",
+          "position": { "x": 700, "y": 120 },
+          "stylePreset": "green",
+          "data": {
+            "name": "LMS Data",
+            "dbType": "mysql",
+            "connectionNotes": "WordPress MySQL with plugin-owned prefixed tables.",
+            "schemaNotes": "wp_lms_courses: id bigint pk, slug varchar(120) unique, title text, status varchar(24)\nwp_lms_modules: id bigint pk, course_id bigint fk, title text, sort_order int\nwp_lms_lessons: id bigint pk, module_id bigint fk, lesson_type varchar(24), content longtext\nwp_lms_enrollments: id bigint pk, user_id bigint, course_id bigint, progress decimal(5,2), status varchar(24)\nwp_lms_attempts: id bigint pk, enrollment_id bigint fk, quiz_id bigint, score decimal(5,2), started_at datetime\nwp_lms_certificates: id bigint pk, enrollment_id bigint fk, issued_at datetime, file_path varchar(255)",
+            "dbSchemaExpanded": false
+          }
+        },
+        {
+          "id": "service-plugin-core",
+          "type": "service",
+          "position": { "x": 400, "y": 320 },
+          "stylePreset": "blue",
+          "data": {
+            "name": "Plugin Core",
+            "tag": "Bootstrap",
+            "description": "Registers hooks, capabilities, roles, CPT bridges, and module bindings.",
+            "endpoints": [
+              { "id": "core-health", "method": "GET", "route": "/lms/v1/health" }
+            ],
+            "notes": "Single entrypoint orchestrating domain services."
+          }
+        },
+        {
+          "id": "service-lms-api",
+          "type": "service",
+          "position": { "x": 400, "y": 520 },
+          "stylePreset": "blue",
+          "data": {
+            "name": "LMS API",
+            "tag": "REST",
+            "description": "Public/student REST endpoints for course catalog, progress, and lesson state.",
+            "endpoints": [
+              { "id": "courses-list", "method": "GET", "route": "/lms/v1/courses" },
+              { "id": "course-detail", "method": "GET", "route": "/lms/v1/courses/:id" },
+              { "id": "progress-update", "method": "PATCH", "route": "/lms/v1/enrollments/:id/progress" }
+            ],
+            "notes": "All output passes through Presenter layer."
+          }
+        },
+        {
+          "id": "service-enrollment",
+          "type": "service",
+          "position": { "x": 400, "y": 720 },
+          "stylePreset": "blue",
+          "data": {
+            "name": "Enrollment Service",
+            "tag": "CRUD",
+            "description": "Custom table CRUD for enrollments, progress snapshots, and status transitions.",
+            "endpoints": [
+              { "id": "enroll-create", "method": "POST", "route": "/lms/v1/enrollments" },
+              { "id": "enroll-list", "method": "GET", "route": "/lms/v1/enrollments" },
+              { "id": "enroll-update", "method": "PATCH", "route": "/lms/v1/enrollments/:id" },
+              { "id": "enroll-delete", "method": "DELETE", "route": "/lms/v1/enrollments/:id" }
+            ],
+            "notes": "Repository-backed writes using transaction-safe updates."
+          }
+        },
+        {
+          "id": "service-quiz",
+          "type": "service",
+          "position": { "x": 400, "y": 920 },
+          "stylePreset": "blue",
+          "data": {
+            "name": "Quiz Service",
+            "tag": "Assessment",
+            "description": "Handles attempts CRUD, grading pipeline, and pass/fail event emission.",
+            "endpoints": [
+              { "id": "quiz-submit", "method": "POST", "route": "/lms/v1/quizzes/:id/submit" },
+              { "id": "attempt-list", "method": "GET", "route": "/lms/v1/attempts" }
+            ],
+            "notes": "Stores normalized attempt records in custom tables."
+          }
+        },
+        {
+          "id": "router-admin-hooks",
+          "type": "router",
+          "position": { "x": 700, "y": 340 },
+          "stylePreset": "teal",
+          "data": {
+            "name": "Admin Hook Router",
+            "tag": "Hook fan-out",
+            "inputCount": 2,
+            "outputCount": 3,
+            "notes": "Routes admin-side hooks: save_post, profile_update, plugin activation."
+          }
+        },
+        {
+          "id": "router-student-flow",
+          "type": "router",
+          "position": { "x": 700, "y": 640 },
+          "stylePreset": "teal",
+          "data": {
+            "name": "Student Flow Router",
+            "tag": "Flow split",
+            "inputCount": 1,
+            "outputCount": 4,
+            "notes": "Splits student interactions into enrollment, quiz, payment, and notification branches."
+          }
+        },
+        {
+          "id": "action-cron-jobs",
+          "type": "action",
+          "position": { "x": 700, "y": 920 },
+          "stylePreset": "purple",
+          "data": {
+            "name": "WP Cron Jobs",
+            "tag": "Async",
+            "comment": "Nightly progress aggregation, stale enrollment cleanup, and certificate generation."
+          }
+        },
+        {
+          "id": "service-payment",
+          "type": "service",
+          "position": { "x": 1020, "y": 520 },
+          "stylePreset": "purple",
+          "data": {
+            "name": "Payment Service",
+            "tag": "Billing",
+            "description": "Creates checkout intents, verifies webhooks, and unlocks enrollments.",
+            "endpoints": [
+              { "id": "checkout-create", "method": "POST", "route": "/lms/v1/payments/checkout" },
+              { "id": "webhook-stripe", "method": "POST", "route": "/lms/v1/payments/webhook" }
+            ],
+            "notes": "Idempotent webhook handling with signature validation."
+          }
+        },
+        {
+          "id": "service-notify",
+          "type": "service",
+          "position": { "x": 1020, "y": 720 },
+          "stylePreset": "purple",
+          "data": {
+            "name": "Notification Service",
+            "tag": "Comms",
+            "description": "Sends enrollment and completion notifications via mail provider.",
+            "endpoints": [
+              { "id": "notify-enroll", "method": "POST", "route": "/lms/v1/notifications/enrollment" },
+              { "id": "notify-completion", "method": "POST", "route": "/lms/v1/notifications/completion" }
+            ],
+            "notes": "Queued dispatch for bulk class enrollments."
+          }
+        },
+        {
+          "id": "service-reporting",
+          "type": "service",
+          "position": { "x": 1020, "y": 920 },
+          "stylePreset": "teal",
+          "data": {
+            "name": "Reporting Service",
+            "tag": "Analytics",
+            "description": "Builds progress summaries, cohort stats, and admin dashboard cards.",
+            "endpoints": [
+              { "id": "report-course", "method": "GET", "route": "/lms/v1/reports/course/:id" },
+              { "id": "report-user", "method": "GET", "route": "/lms/v1/reports/user/:id" }
+            ],
+            "notes": "DTO-normalized query responses for stable chart payloads."
+          }
+        },
+        {
+          "id": "integration-stripe",
+          "type": "integration",
+          "position": { "x": 1340, "y": 520 },
+          "stylePreset": "purple",
+          "data": {
+            "name": "Stripe",
+            "boundary": "external",
+            "baseUrl": "https://api.stripe.com",
+            "authMethod": "Secret key + webhook signature",
+            "requestNotes": "Checkout session and payment intent lifecycle."
+          }
+        },
+        {
+          "id": "integration-mailer",
+          "type": "integration",
+          "position": { "x": 1340, "y": 720 },
+          "stylePreset": "purple",
+          "data": {
+            "name": "MailerLite",
+            "boundary": "external",
+            "baseUrl": "https://connect.mailerlite.com/api",
+            "authMethod": "API token",
+            "requestNotes": "Transactional and sequence-based LMS emails."
+          }
+        },
+        {
+          "id": "integration-zoom",
+          "type": "integration",
+          "position": { "x": 1340, "y": 920 },
+          "stylePreset": "purple",
+          "data": {
+            "name": "Zoom",
+            "boundary": "external",
+            "baseUrl": "https://api.zoom.us/v2",
+            "authMethod": "Server-to-server OAuth",
+            "requestNotes": "Optional live class session provisioning."
+          }
+        },
+        {
+          "id": "code-orm-pattern",
+          "type": "code",
+          "position": { "x": 1020, "y": 120 },
+          "stylePreset": "grey",
+          "data": {
+            "title": "ORM Repository Pattern",
+            "language": "typescript",
+            "expanded": false,
+            "content": "final class EnrollmentRepository {\n  public function create(EnrollmentDto $dto): EnrollmentModel {\n    return EnrollmentModel::query()->create($dto->toArray());\n  }\n\n  public function updateProgress(int $id, float $progress): void {\n    EnrollmentModel::query()->where('id', $id)->update(['progress' => $progress]);\n  }\n}"
+          }
+        },
+        {
+          "id": "code-dto-pattern",
+          "type": "code",
+          "position": { "x": 1020, "y": 300 },
+          "stylePreset": "grey",
+          "data": {
+            "title": "DTO Contract",
+            "language": "typescript",
+            "expanded": false,
+            "content": "final class EnrollmentDto {\n  public function __construct(\n    public int $userId,\n    public int $courseId,\n    public string $status,\n  ) {}\n\n  public function toArray(): array {\n    return ['user_id' => $this->userId, 'course_id' => $this->courseId, 'status' => $this->status];\n  }\n}"
+          }
+        },
+        {
+          "id": "code-presenter-pattern",
+          "type": "code",
+          "position": { "x": 1020, "y": 380 },
+          "stylePreset": "grey",
+          "data": {
+            "title": "Presenter Output",
+            "language": "typescript",
+            "expanded": false,
+            "content": "final class CoursePresenter {\n  public static function toApi(CourseModel $course): array {\n    return [\n      'id' => (int) $course->id,\n      'title' => (string) $course->title,\n      'progress' => (float) $course->progress,\n    ];\n  }\n}"
+          }
+        },
+        {
+          "id": "milestone-1",
+          "type": "milestone",
+          "position": { "x": 1660, "y": 320 },
+          "stylePreset": "red",
+          "data": {
+            "title": "Core Plugin + Schema",
+            "milestoneLabel": "Milestone 1",
+            "order": 1,
+            "goal": "Bootstrap plugin, migrations, capabilities, and base CRUD services.",
+            "dueDate": "2026-10-10",
+            "priority": "high"
+          }
+        },
+        {
+          "id": "milestone-2",
+          "type": "milestone",
+          "position": { "x": 1660, "y": 520 },
+          "stylePreset": "red",
+          "data": {
+            "title": "Student Flow + Payments",
+            "milestoneLabel": "Milestone 2",
+            "order": 2,
+            "goal": "Ship enrollment/quiz APIs and Stripe payment unlock flow.",
+            "dueDate": "2026-11-14",
+            "priority": "critical"
+          }
+        },
+        {
+          "id": "milestone-3",
+          "type": "milestone",
+          "position": { "x": 1660, "y": 720 },
+          "stylePreset": "red",
+          "data": {
+            "title": "Notifications + Reporting",
+            "milestoneLabel": "Milestone 3",
+            "order": 3,
+            "goal": "Automate learner communication and reporting dashboards.",
+            "dueDate": "2026-12-12",
+            "priority": "medium"
+          }
+        },
+        {
+          "id": "milestone-4",
+          "type": "milestone",
+          "position": { "x": 1660, "y": 920 },
+          "stylePreset": "red",
+          "data": {
+            "title": "Hardening + Integrations",
+            "milestoneLabel": "Milestone 4",
+            "order": 4,
+            "goal": "Finalize async jobs, Zoom optional flow, and deployment readiness.",
+            "dueDate": "2027-01-09",
+            "priority": "high"
+          }
+        }
+      ],
+      "edges": [
+        { "id": "e-1", "source": "infra-1", "target": "framework-1", "type": "smoothstep", "label": "runtime" },
+        { "id": "e-2", "source": "framework-1", "target": "service-plugin-core", "type": "smoothstep", "label": "bootstrap" },
+        { "id": "e-3", "source": "framework-1", "target": "service-lms-api", "type": "smoothstep", "label": "rest routes" },
+        { "id": "e-4", "source": "database-1", "target": "service-enrollment", "type": "smoothstep", "label": "custom table CRUD" },
+        { "id": "e-5", "source": "database-1", "target": "service-quiz", "type": "smoothstep", "label": "attempts CRUD" },
+        { "id": "e-6", "source": "database-1", "target": "service-payment", "type": "smoothstep", "label": "orders mapping" },
+        { "id": "e-7", "source": "database-1", "target": "service-reporting", "type": "smoothstep", "label": "analytics read model" },
+        { "id": "e-8", "source": "service-plugin-core", "target": "router-admin-hooks", "type": "smoothstep", "label": "wp hooks" },
+        { "id": "e-9", "source": "router-admin-hooks", "target": "service-enrollment", "type": "smoothstep", "label": "admin actions" },
+        { "id": "e-10", "source": "service-lms-api", "target": "router-student-flow", "type": "smoothstep", "label": "student requests" },
+        { "id": "e-11", "source": "router-student-flow", "target": "service-enrollment", "type": "smoothstep", "label": "enroll flow" },
+        { "id": "e-12", "source": "router-student-flow", "target": "service-quiz", "type": "smoothstep", "label": "quiz flow" },
+        { "id": "e-13", "source": "router-student-flow", "target": "service-payment", "type": "smoothstep", "label": "checkout flow" },
+        { "id": "e-14", "source": "router-student-flow", "target": "service-notify", "type": "smoothstep", "label": "event notify" },
+        { "id": "e-15", "source": "service-payment", "target": "integration-stripe", "type": "smoothstep", "label": "billing api" },
+        { "id": "e-16", "source": "service-notify", "target": "integration-mailer", "type": "smoothstep", "label": "email api" },
+        { "id": "e-17", "source": "service-reporting", "target": "integration-zoom", "type": "smoothstep", "label": "live class sync" },
+        { "id": "e-18", "source": "action-cron-jobs", "target": "service-reporting", "type": "smoothstep", "label": "nightly sync" },
+        { "id": "e-19", "source": "action-cron-jobs", "target": "service-notify", "type": "smoothstep", "label": "digest notifications" },
+        { "id": "e-20", "source": "service-enrollment", "target": "service-notify", "type": "smoothstep", "label": "enrollment event" },
+        { "id": "e-21", "source": "service-quiz", "target": "service-reporting", "type": "smoothstep", "label": "result event" },
+        { "id": "e-22", "source": "service-plugin-core", "target": "code-orm-pattern", "type": "smoothstep", "label": "orm reference" },
+        { "id": "e-23", "source": "service-lms-api", "target": "code-dto-pattern", "type": "smoothstep", "label": "dto contract" },
+        { "id": "e-24", "source": "service-lms-api", "target": "code-presenter-pattern", "type": "smoothstep", "label": "presenter output" },
+        { "id": "e-25", "source": "service-plugin-core", "target": "milestone-1", "type": "smoothstep", "label": "deliverable" },
+        { "id": "e-26", "source": "database-1", "target": "milestone-1", "type": "smoothstep", "label": "deliverable" },
+        { "id": "e-27", "source": "service-enrollment", "target": "milestone-2", "type": "smoothstep", "label": "deliverable" },
+        { "id": "e-28", "source": "service-payment", "target": "milestone-2", "type": "smoothstep", "label": "deliverable" },
+        { "id": "e-29", "source": "service-notify", "target": "milestone-3", "type": "smoothstep", "label": "deliverable" },
+        { "id": "e-30", "source": "service-reporting", "target": "milestone-3", "type": "smoothstep", "label": "deliverable" },
+        { "id": "e-31", "source": "action-cron-jobs", "target": "milestone-4", "type": "smoothstep", "label": "deliverable" },
+        { "id": "e-32", "source": "integration-zoom", "target": "milestone-4", "type": "smoothstep", "label": "deliverable" }
+      ]
+    }
+  ]
+}
+
+
