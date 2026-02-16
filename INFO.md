@@ -23,13 +23,14 @@
 - Nodes are merged into one stack node to reduce visual noise.
 - Right click stack node and choose **Unstack** to restore original nodes and stashed edges.
 
-## Comment attach (drag to node)
+## Attach notes and code (drag to node)
 
-- Drag a `Comment` node close to a target node.
+- Drag a `Comment` or `Code` node close to a target node.
 - Drop when attach preview is shown.
-- Comment is attached and hidden under the target node.
-- Target node shows a comment badge counter.
-- Click the badge to expand/collapse attached comments.
+- Attached nodes are hidden under the target node.
+- Target node shows separate attachment counters:
+  comment bubble icon for comments, code icon for code blocks.
+- Click the badge to expand/collapse attached nodes.
 
 ## Navigator
 

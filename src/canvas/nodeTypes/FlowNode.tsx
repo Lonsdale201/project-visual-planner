@@ -621,8 +621,11 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
   const milestoneDueDate = kind === 'milestone' ? toStr(data.dueDate) : '';
   const milestoneLabel = kind === 'milestone' ? (toStr(data.milestoneLabel) || def.label) : def.label;
   const attachedCommentCount = Math.max(0, toNumber(data.attachedCommentCount, 0));
+  const attachedCodeCount = Math.max(0, toNumber(data.attachedCodeCount, 0));
   const attachedCommentsExpanded = Boolean(data.attachedCommentsExpanded);
-  const hasAttachedCommentsBadge = kind !== 'comment' && attachedCommentCount > 0;
+  const hasAttachedCommentBadge = kind !== 'comment' && attachedCommentCount > 0;
+  const hasAttachedCodeBadge = kind !== 'code' && attachedCodeCount > 0;
+  const hasAttachedBadges = hasAttachedCommentBadge || hasAttachedCodeBadge;
   const isAttachCandidate = Boolean(data.__attachCandidate);
   const overviewStats = kind === 'overview' ? collectOverviewStats(allPages) : null;
   const isOverview = kind === 'overview';
@@ -721,10 +724,10 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
     const next = stackActiveIndex >= stackItems.length - 1 ? 0 : stackActiveIndex + 1;
     updateNodeData(id, { activeIndex: next });
   };
-  const toggleAttachedComments = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const toggleAttachedNodes = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
-    if (!hasAttachedCommentsBadge) return;
+    if (!hasAttachedBadges) return;
     updateNodeData(id, { showAttachedComments: !attachedCommentsExpanded });
   };
 
@@ -801,30 +804,63 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
           </Box>
         )}
 
-        {hasAttachedCommentsBadge && (
-          <Button
-            size="small"
-            onClick={toggleAttachedComments}
+        {hasAttachedBadges && (
+          <Box
             sx={{
               position: 'absolute',
               top: -12,
               right: kind === 'milestone' ? 96 : 14,
-              minWidth: 0,
-              height: 24,
-              px: 0.8,
-              borderRadius: 999,
-              border: '1px solid #cfd9ea',
-              bgcolor: attachedCommentsExpanded ? '#edf3ff' : '#f8fafc',
-              color: '#3f5c8c',
-              fontSize: 11,
-              fontWeight: 700,
-              textTransform: 'none',
-              boxShadow: '0 1px 3px rgba(15, 23, 42, 0.08)',
+              display: 'flex',
+              gap: 0.6,
+              alignItems: 'center',
             }}
           >
-            <ChatBubbleOutlineIcon sx={{ fontSize: 14, mr: 0.45 }} />
-            {attachedCommentCount}
-          </Button>
+            {hasAttachedCommentBadge && (
+              <Button
+                size="small"
+                onClick={toggleAttachedNodes}
+                sx={{
+                  minWidth: 0,
+                  height: 24,
+                  px: 0.8,
+                  borderRadius: 999,
+                  border: '1px solid #cfd9ea',
+                  bgcolor: attachedCommentsExpanded ? '#edf3ff' : '#f8fafc',
+                  color: '#3f5c8c',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  textTransform: 'none',
+                  boxShadow: '0 1px 3px rgba(15, 23, 42, 0.08)',
+                }}
+              >
+                <ChatBubbleOutlineIcon sx={{ fontSize: 14, mr: 0.45 }} />
+                {attachedCommentCount}
+              </Button>
+            )}
+
+            {hasAttachedCodeBadge && (
+              <Button
+                size="small"
+                onClick={toggleAttachedNodes}
+                sx={{
+                  minWidth: 0,
+                  height: 24,
+                  px: 0.8,
+                  borderRadius: 999,
+                  border: '1px solid #cfd9ea',
+                  bgcolor: attachedCommentsExpanded ? '#edf3ff' : '#f8fafc',
+                  color: '#3f5c8c',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  textTransform: 'none',
+                  boxShadow: '0 1px 3px rgba(15, 23, 42, 0.08)',
+                }}
+              >
+                <CodeOutlinedIcon sx={{ fontSize: 14, mr: 0.45 }} />
+                {attachedCodeCount}
+              </Button>
+            )}
+          </Box>
         )}
 
         {isAttachCandidate && (
@@ -842,7 +878,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
             }}
           >
             <Chip
-              label="Attach comment"
+              label="Attach node"
               size="small"
               sx={{
                 height: 24,

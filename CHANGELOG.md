@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.1 - 2026-02-16
+
+- Added attach support for `Code` nodes (same drag-to-attach flow as comments).
+- Improved attached node layout to avoid overlaps for mixed `Comment` + `Code` stacks.
+- Added separate attachment badges: comment bubble for comments, code icon for code blocks.
+- Improved attach preview and nested attachment rendering consistency.
+- Updated system docs and keybind guide in `INFO.md`.
+
 ## 1.0.0 - 2026-02-15
 
 - Added stack and unstack workflow from node context menu.

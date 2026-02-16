@@ -154,8 +154,54 @@ interface AttachNodeLike {
   height?: number;
 }
 
+const COMMENT_ATTACH_GAP = 28;
+const COMMENT_STACK_GAP = 20;
+const ATTACHABLE_NODE_TYPES = new Set<NodeKind>(['comment', 'code']);
+
+function isAttachableNodeType(type?: string): boolean {
+  if (!type) return false;
+  return ATTACHABLE_NODE_TYPES.has(type as NodeKind);
+}
+
+function estimateNodeWidth(node: ProjectNode): number {
+  if (node.type === 'overview') return 540;
+  if (node.type === 'code') return 390;
+  return 340;
+}
+
+function estimateNodeHeight(node: ProjectNode): number {
+  if (node.type === 'overview') return 520;
+  if (node.type === 'milestone') return 170;
+  if (node.type === 'integration') return 185;
+  if (node.type === 'action') return 170;
+
+  if (node.type === 'code') {
+    return Boolean(node.data.expanded) ? 460 : 330;
+  }
+
+  if (node.type === 'database') {
+    const schema = typeof node.data.schemaNotes === 'string' ? node.data.schemaNotes : '';
+    const rows = Math.max(4, schema.split('\n').filter(Boolean).length);
+    return 180 + Math.min(6, rows) * 24;
+  }
+
+  if (node.type === 'service') {
+    const endpoints = Array.isArray(node.data.endpoints) ? node.data.endpoints.length : 0;
+    return 150 + Math.min(4, endpoints) * 26 + (endpoints > 4 ? 22 : 0);
+  }
+
+  if (node.type === 'comment' || node.type === 'spec') {
+    const body = typeof node.data.body === 'string' ? node.data.body.trim() : '';
+    if (!body) return 170;
+    const lineCount = Math.max(body.split('\n').length, Math.ceil(body.length / 56));
+    return Math.min(360, 170 + Math.max(0, lineCount - 4) * 12);
+  }
+
+  return 165;
+}
+
 function findAttachTargetId(draggedNode: AttachNodeLike, canvasNodes: AttachNodeLike[]): string | null {
-  if (draggedNode.type !== 'comment') return null;
+  if (!isAttachableNodeType(draggedNode.type)) return null;
 
   const centerOf = (node: AttachNodeLike) => ({
     x: node.position.x + ((node.width ?? 320) / 2),
@@ -267,16 +313,16 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
 
     const attachedCommentCounts = new Map<string, number>();
     storeNodes.forEach(node => {
-      if (node.type !== 'comment') return;
+      if (!isAttachableNodeType(node.type)) return;
       const attachedTo = typeof node.data.attachedTo === 'string' ? node.data.attachedTo : '';
       if (!attachedTo || !nodeById.has(attachedTo)) return;
       attachedCommentCounts.set(attachedTo, (attachedCommentCounts.get(attachedTo) ?? 0) + 1);
     });
 
     const treeCandidateNodes = storeNodes.filter(node => {
-      if (node.type !== 'comment') return true;
+      if (!isAttachableNodeType(node.type)) return true;
       const attachedTo = typeof node.data.attachedTo === 'string' ? node.data.attachedTo : '';
-      return !attachedTo;
+      return !attachedTo || !nodeById.has(attachedTo);
     });
     const treeIds = new Set(treeCandidateNodes.map(node => node.id));
 
@@ -316,7 +362,7 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
     const descendants = new Map<string, Set<string>>();
     const attachedCommentsByTarget = new Map<string, string[]>();
     storeNodes.forEach(node => {
-      if (node.type !== 'comment') return;
+      if (!isAttachableNodeType(node.type)) return;
       const attachedTo = typeof node.data.attachedTo === 'string' ? node.data.attachedTo : '';
       if (!attachedTo) return;
       const list = attachedCommentsByTarget.get(attachedTo) ?? [];
@@ -401,10 +447,12 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
   const { displayNodes, displayEdges } = React.useMemo(() => {
     const nodeById = new Map(storeNodes.map(node => [node.id, node]));
     const attachedByTarget = new Map<string, ProjectNode[]>();
+    const renderedNodes: ProjectNode[] = [];
+    const renderedIds = new Set<string>();
 
     storeNodes.forEach(node => {
       if (!visibleNodeIds.has(node.id)) return;
-      if (node.type !== 'comment') return;
+      if (!isAttachableNodeType(node.type)) return;
       const attachedTo = typeof node.data.attachedTo === 'string' ? node.data.attachedTo : '';
       if (!attachedTo || !nodeById.has(attachedTo) || !visibleNodeIds.has(attachedTo)) return;
       const list = attachedByTarget.get(attachedTo) ?? [];
@@ -412,55 +460,78 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
       attachedByTarget.set(attachedTo, list);
     });
 
-    const renderedNodes: ProjectNode[] = [];
-    const visibleIds = new Set<string>();
+    const hasValidAttachTarget = (node: ProjectNode): boolean => {
+      if (!isAttachableNodeType(node.type)) return false;
+      const attachedTo = typeof node.data.attachedTo === 'string' ? node.data.attachedTo : '';
+      if (!attachedTo || attachedTo === node.id) return false;
+      return nodeById.has(attachedTo) && visibleNodeIds.has(attachedTo);
+    };
 
-    storeNodes.forEach(node => {
+    const renderNodeRecursive = (node: ProjectNode, positionOverride?: { x: number; y: number }) => {
       if (!visibleNodeIds.has(node.id)) return;
-      if (node.type === 'comment') {
-        const attachedTo = typeof node.data.attachedTo === 'string' ? node.data.attachedTo : '';
-        if (attachedTo && nodeById.has(attachedTo) && visibleNodeIds.has(attachedTo)) {
-          const targetNode = nodeById.get(attachedTo)!;
-          const isExpanded = Boolean(targetNode.data.showAttachedComments);
-          if (!isExpanded) return;
+      if (renderedIds.has(node.id)) return;
 
-          const siblingComments = attachedByTarget.get(attachedTo) ?? [];
-          const idx = siblingComments.findIndex(item => item.id === node.id);
-          const safeIdx = idx < 0 ? 0 : idx;
-          const count = Math.max(1, siblingComments.length);
-          const spread = 120;
-          const startY = targetNode.position.y - ((count - 1) * spread) / 2;
-          const offsetX = flowDirection === 'RIGHT_LEFT' ? -360 : 360;
-
-          const projectedNode: ProjectNode = {
-            ...node,
-            position: {
-              x: targetNode.position.x + offsetX,
-              y: startY + safeIdx * spread,
-            },
-          };
-          renderedNodes.push(projectedNode);
-          visibleIds.add(projectedNode.id);
-          return;
-        }
-      }
-
-      const attachedCount = (attachedByTarget.get(node.id) ?? []).length;
+      const attachedChildren = attachedByTarget.get(node.id) ?? [];
+      const attachedCount = attachedChildren.length;
+      const attachedCommentCount = attachedChildren.filter(child => child.type === 'comment').length;
+      const attachedCodeCount = attachedChildren.filter(child => child.type === 'code').length;
       const projectedNode: ProjectNode = {
         ...node,
+        position: positionOverride ? { ...positionOverride } : { ...node.position },
         data: {
           ...node.data,
-          attachedCommentCount: attachedCount,
+          attachedNodeCount: attachedCount,
+          attachedCommentCount,
+          attachedCodeCount,
           attachedCommentsExpanded: Boolean(node.data.showAttachedComments),
           __attachCandidate: node.id === attachPreviewTargetId,
           __dimmed: dimmedNodeIds.has(node.id),
         },
       };
+
       renderedNodes.push(projectedNode);
-      visibleIds.add(projectedNode.id);
+      renderedIds.add(projectedNode.id);
+
+      if (!Boolean(node.data.showAttachedComments)) return;
+      const children = attachedByTarget.get(node.id) ?? [];
+      if (!children.length) return;
+
+      const childHeights = children.map(child => estimateNodeHeight(child));
+      const totalChildrenHeight = childHeights.reduce((sum, h) => sum + h, 0);
+      const totalGapsHeight = Math.max(0, children.length - 1) * COMMENT_STACK_GAP;
+      const totalStackHeight = totalChildrenHeight + totalGapsHeight;
+      const parentCenterY = projectedNode.position.y + (estimateNodeHeight(projectedNode) / 2);
+      const startY = parentCenterY - (totalStackHeight / 2);
+      const parentWidth = estimateNodeWidth(projectedNode);
+
+      children.forEach((childNode, index) => {
+        const offsetBefore = childHeights
+          .slice(0, index)
+          .reduce((sum, h) => sum + h + COMMENT_STACK_GAP, 0);
+        const childWidth = estimateNodeWidth(childNode);
+        const childX = flowDirection === 'RIGHT_LEFT'
+          ? projectedNode.position.x - childWidth - COMMENT_ATTACH_GAP
+          : projectedNode.position.x + parentWidth + COMMENT_ATTACH_GAP;
+        const childY = startY + offsetBefore;
+
+        renderNodeRecursive(childNode, { x: childX, y: childY });
+      });
+    };
+
+    storeNodes.forEach(node => {
+      if (!visibleNodeIds.has(node.id)) return;
+      if (hasValidAttachTarget(node)) return;
+      renderNodeRecursive(node);
     });
 
-    const renderedEdges = storeEdges.filter(edge => visibleIds.has(edge.source) && visibleIds.has(edge.target));
+    storeNodes.forEach(node => {
+      if (!visibleNodeIds.has(node.id)) return;
+      if (renderedIds.has(node.id)) return;
+      if (hasValidAttachTarget(node)) return;
+      renderNodeRecursive(node);
+    });
+
+    const renderedEdges = storeEdges.filter(edge => renderedIds.has(edge.source) && renderedIds.has(edge.target));
 
     return { displayNodes: renderedNodes, displayEdges: renderedEdges };
   }, [storeNodes, storeEdges, flowDirection, attachPreviewTargetId, visibleNodeIds, dimmedNodeIds]);
@@ -758,7 +829,7 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
   }, []);
 
   const onNodeDrag = useCallback((_: React.MouseEvent, draggedNode: Node) => {
-    const nextTargetId = draggedNode.type === 'comment' ? findAttachTargetId(draggedNode, nodes) : null;
+    const nextTargetId = isAttachableNodeType(draggedNode.type) ? findAttachTargetId(draggedNode, nodes) : null;
     pendingAttachPreviewIdRef.current = nextTargetId;
 
     if (attachPreviewFrameRef.current !== null) return;
@@ -781,14 +852,14 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
       draggedNodes.map(n => [n.id, { x: n.position.x, y: n.position.y }]),
     );
 
-    const computedTargetId = draggedNode.type === 'comment' ? findAttachTargetId(draggedNode, nodes) : null;
+    const computedTargetId = isAttachableNodeType(draggedNode.type) ? findAttachTargetId(draggedNode, nodes) : null;
     const targetId = computedTargetId ?? attachPreviewTargetId;
 
     const nextNodes = activePage.nodes.map(node => {
       const position = draggedPositionById.get(node.id);
       const baseNode = position ? { ...node, position } : node;
 
-      if (draggedNode.type !== 'comment' || baseNode.id !== draggedNode.id) {
+      if (!isAttachableNodeType(draggedNode.type) || baseNode.id !== draggedNode.id) {
         return baseNode;
       }
 

@@ -121,6 +121,7 @@ export interface CodeData {
   language: 'typescript' | 'javascript' | 'json' | 'yaml' | 'sql' | 'bash' | 'http' | 'markdown' | 'html';
   content: string;
   expanded: boolean;
+  attachedTo?: string;
 }
 
 export interface CommentData {
