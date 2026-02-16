@@ -84,7 +84,20 @@ export interface StackData {
 
 export interface DatabaseData {
   name: string;
-  dbType: 'postgres' | 'mysql' | 'mongodb' | 'redis' | 'supabase' | 's3' | 'sqlite' | 'other';
+  dbType:
+    | 'postgres'
+    | 'mysql'
+    | 'mongodb'
+    | 'redis'
+    | 'supabase'
+    | 'supabase cloud'
+    | 'google cloud sql'
+    | 'firebase firestore'
+    | 'neon'
+    | 'planetscale'
+    | 's3'
+    | 'sqlite'
+    | 'other';
   connectionNotes: string;
   schemaNotes: string;
 }

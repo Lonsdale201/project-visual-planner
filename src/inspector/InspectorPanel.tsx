@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Box, Typography, Divider, TextField, Button, Chip, Stack,
+  Box, Typography, Divider, TextField, Button, Chip, Stack, Tabs, Tab, Alert,
 } from '@mui/material';
 import { useProjectStore } from '../store/useProjectStore';
 import { nodeTypeRegistry } from '../model/registry';
 import SchemaForm from './forms/SchemaForm';
-import type { NodeKind, Page } from '../model/types';
+import type { NodeKind, NodeStylePreset, Page } from '../model/types';
 
 // Helper: get active page directly from state (no get() indirection)
 function selectActivePage(s: { project: { pages: Page[] }; activePageId: string }): Page {
@@ -94,16 +94,176 @@ function NodeInspector() {
   const selectedNodeId = useProjectStore(s => s.selectedNodeId);
   const page = useProjectStore(s => selectActivePage(s));
   const updateNodeData = useProjectStore(s => s.updateNodeData);
+  const patchNode = useProjectStore(s => s.patchNode);
   const updateEdgeLabel = useProjectStore(s => s.updateEdgeLabel);
   const removeNode = useProjectStore(s => s.removeNode);
 
   const node = page.nodes.find(n => n.id === selectedNodeId);
   if (!node) return <StatsPanel />;
+  const showJsonEditor = node.type !== 'overview';
+
+  const [mode, setMode] = useState<'form' | 'json'>('form');
+  const [jsonDraft, setJsonDraft] = useState('');
+  const [jsonError, setJsonError] = useState<string | null>(null);
+  const [jsonDirty, setJsonDirty] = useState(false);
 
   const def = nodeTypeRegistry[node.type];
 
   const handleChange = (key: string, value: unknown) => {
     updateNodeData(node.id, { [key]: value });
+  };
+
+  const canonicalNodeJson = useMemo(
+    () => JSON.stringify(node, null, 2),
+    [node],
+  );
+
+  const immutableTopLevelKeys = useMemo(() => new Set([
+    'id',
+    'type',
+    'width',
+    'height',
+    'selected',
+    'dragging',
+    'resizing',
+    'positionAbsolute',
+    'sourcePosition',
+    'targetPosition',
+    'zIndex',
+    'parentId',
+    'extent',
+    'expandParent',
+    'hidden',
+  ]), []);
+
+  useEffect(() => {
+    setJsonError(null);
+    setJsonDirty(false);
+    setJsonDraft(canonicalNodeJson);
+    setMode('form');
+  }, [node.id]);
+
+  useEffect(() => {
+    if (jsonDirty) return;
+    setJsonDraft(canonicalNodeJson);
+  }, [canonicalNodeJson, jsonDirty]);
+
+  const copyJson = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(jsonDraft);
+        return;
+      }
+      const textarea = document.createElement('textarea');
+      textarea.value = jsonDraft;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    } catch {
+      // noop
+    }
+  };
+
+  const pasteJson = async () => {
+    try {
+      if (!navigator.clipboard?.readText) return;
+      const text = await navigator.clipboard.readText();
+      if (!text.trim()) return;
+      setJsonDraft(text);
+      setJsonDirty(true);
+      setJsonError(null);
+    } catch {
+      // noop
+    }
+  };
+
+  const applyJson = () => {
+    try {
+      const parsed = JSON.parse(jsonDraft) as unknown;
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        setJsonError('JSON must be an object.');
+        return;
+      }
+
+      const value = parsed as Record<string, unknown>;
+      const stylePresets: NodeStylePreset[] = ['blue', 'green', 'orange', 'red', 'purple', 'grey', 'teal'];
+
+      const patch: {
+        data?: Record<string, unknown>;
+        position?: { x: number; y: number };
+        stylePreset?: NodeStylePreset;
+      } = {};
+
+      const hasMutableTopLevelKeys =
+        Object.prototype.hasOwnProperty.call(value, 'data')
+        || Object.prototype.hasOwnProperty.call(value, 'position')
+        || Object.prototype.hasOwnProperty.call(value, 'stylePreset');
+
+      const hasImmutableTopLevelKeys = Object.keys(value).some(key => immutableTopLevelKeys.has(key));
+
+      if (Object.prototype.hasOwnProperty.call(value, 'data')) {
+        if (!value.data || typeof value.data !== 'object' || Array.isArray(value.data)) {
+          setJsonError('`data` must be an object.');
+          return;
+        }
+        patch.data = value.data as Record<string, unknown>;
+      } else if (!hasMutableTopLevelKeys && !hasImmutableTopLevelKeys) {
+        // Convenience mode: paste plain data object.
+        patch.data = value;
+      }
+
+      if (Object.prototype.hasOwnProperty.call(value, 'position')) {
+        const position = value.position as unknown;
+        if (!position || typeof position !== 'object' || Array.isArray(position)) {
+          setJsonError('`position` must be an object with numeric `x` and `y`.');
+          return;
+        }
+
+        const x = (position as { x?: unknown }).x;
+        const y = (position as { y?: unknown }).y;
+        if (typeof x !== 'number' || !Number.isFinite(x) || typeof y !== 'number' || !Number.isFinite(y)) {
+          setJsonError('`position.x` and `position.y` must be finite numbers.');
+          return;
+        }
+
+        patch.position = { x, y };
+      }
+
+      if (Object.prototype.hasOwnProperty.call(value, 'stylePreset')) {
+        const stylePreset = value.stylePreset;
+        if (typeof stylePreset === 'string' && stylePresets.includes(stylePreset as NodeStylePreset)) {
+          patch.stylePreset = stylePreset as NodeStylePreset;
+        } else {
+          setJsonError(`Invalid stylePreset. Allowed: ${stylePresets.join(', ')}.`);
+          return;
+        }
+      }
+
+      // Intentionally ignored on apply: immutable/system top-level keys and unknown keys.
+      if (!patch.data && !patch.position && !patch.stylePreset) {
+        if (hasImmutableTopLevelKeys) {
+          setJsonError('Only immutable/system fields were found. Editable fields: `data`, `position`, `stylePreset`.');
+          return;
+        }
+        setJsonError('No applicable fields found. Use `data`, `position` or `stylePreset`.');
+        return;
+      }
+
+      patchNode(node.id, patch);
+      setJsonError(null);
+      setJsonDirty(false);
+    } catch {
+      setJsonError('Invalid JSON format.');
+    }
+  };
+
+  const resetJsonDraft = () => {
+    setJsonDraft(canonicalNodeJson);
+    setJsonError(null);
+    setJsonDirty(false);
   };
 
   const outgoingEdges = page.edges.filter(e => e.source === node.id);
@@ -121,12 +281,75 @@ function NodeInspector() {
       </Box>
       <Divider sx={{ mb: 2 }} />
 
-      <SchemaForm
-        fields={def.fields}
-        data={node.data}
-        nodeKind={node.type}
-        onChange={handleChange}
-      />
+      <Tabs
+        value={mode}
+        onChange={(_, value: 'form' | 'json') => setMode(value)}
+        variant="fullWidth"
+        sx={{ mb: 1.2, minHeight: 34, '& .MuiTab-root': { minHeight: 34, textTransform: 'none', fontWeight: 700, fontSize: 12 } }}
+      >
+        <Tab value="form" label="Form" />
+        {showJsonEditor && <Tab value="json" label="JSON" />}
+      </Tabs>
+
+      {mode === 'form' || !showJsonEditor ? (
+        <SchemaForm
+          fields={def.fields}
+          data={node.data}
+          nodeKind={node.type}
+          onChange={handleChange}
+        />
+      ) : (
+        <Stack spacing={1}>
+          <Typography variant="caption" color="text.secondary">
+            Editable node JSON. Apply ignores immutable/system keys (for example <code>id</code>, <code>type</code>, <code>width</code>, <code>height</code>).
+          </Typography>
+          <TextField
+            value={jsonDraft}
+            onChange={event => {
+              setJsonDraft(event.target.value);
+              setJsonDirty(true);
+            }}
+            multiline
+            minRows={16}
+            fullWidth
+            size="small"
+            sx={{
+              '& .MuiInputBase-inputMultiline': {
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                fontSize: 12.5,
+                lineHeight: 1.45,
+                resize: 'vertical',
+              },
+            }}
+          />
+          {jsonError && (
+            <Alert severity="error" sx={{ py: 0.3 }}>
+              {jsonError}
+            </Alert>
+          )}
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
+            <Stack direction="row" spacing={0.8} sx={{ flexWrap: 'wrap', gap: 0.8 }}>
+              <Button size="small" variant="outlined" onClick={copyJson} sx={{ textTransform: 'none' }}>
+                Copy
+              </Button>
+              <Button size="small" variant="outlined" onClick={pasteJson} sx={{ textTransform: 'none' }}>
+                Paste
+              </Button>
+              <Button size="small" variant="outlined" onClick={resetJsonDraft} sx={{ textTransform: 'none' }}>
+                Reset
+              </Button>
+            </Stack>
+            <Button
+              size="small"
+              variant="contained"
+              onClick={applyJson}
+              sx={{ textTransform: 'none', minWidth: 88, ml: 'auto' }}
+            >
+              Apply
+            </Button>
+          </Box>
+        </Stack>
+      )}
 
       <Divider sx={{ my: 2 }} />
       <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>

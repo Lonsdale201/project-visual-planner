@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1 - 2026.02.16
+
+- Added single-node JSON schema editor in the inspector sidebar (copy/paste/apply per node).
+- Code nodes are now attachable to parent nodes the same way as comments.
+- Fixed router handle updates so connection lines follow updated `in/out` handle positions.
+- Added tech stack label toggle for the `Project Overview` node.
+- Fixed `Database` node behavior: clearing `schemaNotes` removes the placeholder schema block from node view.
+- Expanded `Database` type options with more managed database service providers.
+
 ## 1.0.1 - 2026-02-16
 
 - Added attach support for `Code` nodes (same drag-to-attach flow as comments).

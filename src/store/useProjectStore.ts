@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { v4 as uuid } from 'uuid';
 import type {
   Project, Page, ProjectNode, ProjectEdge,
-  NodeKind, FlowDirection, EdgeType, ThemePreset, PageViewport,
+  NodeKind, FlowDirection, EdgeType, ThemePreset, PageViewport, NodeStylePreset,
 } from '../model/types';
 import { nodeTypeRegistry } from '../model/registry';
 
@@ -92,6 +92,14 @@ interface ProjectStore {
   // Node actions
   addNode: (kind: NodeKind, position: { x: number; y: number }) => void;
   updateNodeData: (nodeId: string, data: Record<string, unknown>) => void;
+  patchNode: (
+    nodeId: string,
+    patch: {
+      data?: Record<string, unknown>;
+      position?: { x: number; y: number };
+      stylePreset?: NodeStylePreset;
+    },
+  ) => void;
   updateNodePosition: (nodeId: string, position: { x: number; y: number }) => void;
   removeNode: (nodeId: string) => void;
   setSelectedNode: (nodeId: string | null) => void;
@@ -120,6 +128,37 @@ function updatePage(pages: Page[], pageId: string, updater: (p: Page) => Page): 
 function cloneProject(project: Project): Project {
   if (typeof structuredClone === 'function') return structuredClone(project);
   return JSON.parse(JSON.stringify(project)) as Project;
+}
+
+function toFiniteNumber(value: unknown, fallback: number): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const n = Number(value);
+    if (Number.isFinite(n)) return n;
+  }
+  return fallback;
+}
+
+function clampRouterHandleCount(value: unknown, fallback: number): number {
+  const raw = Math.round(toFiniteNumber(value, fallback));
+  if (!Number.isFinite(raw)) return fallback;
+  return Math.min(8, Math.max(0, raw));
+}
+
+function remapRouterHandle(
+  handle: string | undefined,
+  prefix: 'in' | 'out',
+  nextCount: number,
+): string | undefined {
+  if (!handle) return handle;
+  const match = handle.match(new RegExp(`^${prefix}-(\\d+)$`));
+  if (!match) return handle;
+
+  const index = Number(match[1]);
+  if (!Number.isFinite(index)) return handle;
+  if (nextCount <= 0) return undefined;
+  if (index < nextCount) return `${prefix}-${index}`;
+  return `${prefix}-${nextCount - 1}`;
 }
 
 function toFlowAxes(position: { x: number; y: number }, direction: FlowDirection): { primary: number; secondary: number } {
@@ -340,16 +379,131 @@ export const useProjectStore = create<ProjectStore>((set, get) => {
       };
     }),
 
-    updateNodeData: (nodeId, data) => withHistory(s => ({
-      dirty: true,
-      project: {
-        ...s.project,
-        pages: updatePage(s.project.pages, s.activePageId, p => ({
-          ...p,
-          nodes: p.nodes.map(n => n.id === nodeId ? { ...n, data: { ...n.data, ...data } } : n),
-        })),
-      },
-    })),
+    updateNodeData: (nodeId, data) => withHistory(s => {
+      const activePage = s.project.pages.find(p => p.id === s.activePageId);
+      if (!activePage) return s;
+
+      const targetNode = activePage.nodes.find(n => n.id === nodeId);
+      if (!targetNode) return s;
+
+      const nextNodes = activePage.nodes.map(n => (
+        n.id === nodeId ? { ...n, data: { ...n.data, ...data } } : n
+      ));
+
+      let nextEdges = activePage.edges;
+      if (targetNode.type === 'router') {
+        const inputTouched = Object.prototype.hasOwnProperty.call(data, 'inputCount');
+        const outputTouched = Object.prototype.hasOwnProperty.call(data, 'outputCount');
+
+        if (inputTouched || outputTouched) {
+          const nextInputCount = clampRouterHandleCount(
+            inputTouched ? data.inputCount : targetNode.data.inputCount,
+            2,
+          );
+          const nextOutputCount = clampRouterHandleCount(
+            outputTouched ? data.outputCount : targetNode.data.outputCount,
+            3,
+          );
+
+          nextEdges = activePage.edges.map(edge => {
+            if (edge.source !== nodeId && edge.target !== nodeId) return edge;
+
+            const nextSourceHandle = edge.source === nodeId
+              ? remapRouterHandle(edge.sourceHandle, 'out', nextOutputCount)
+              : edge.sourceHandle;
+            const nextTargetHandle = edge.target === nodeId
+              ? remapRouterHandle(edge.targetHandle, 'in', nextInputCount)
+              : edge.targetHandle;
+
+            if (nextSourceHandle === edge.sourceHandle && nextTargetHandle === edge.targetHandle) return edge;
+
+            return {
+              ...edge,
+              sourceHandle: nextSourceHandle,
+              targetHandle: nextTargetHandle,
+            };
+          });
+        }
+      }
+
+      return {
+        dirty: true,
+        project: {
+          ...s.project,
+          pages: updatePage(s.project.pages, s.activePageId, p => ({
+            ...p,
+            nodes: nextNodes,
+            edges: nextEdges,
+          })),
+        },
+      };
+    }),
+
+    patchNode: (nodeId, patch) => withHistory(s => {
+      const activePage = s.project.pages.find(p => p.id === s.activePageId);
+      if (!activePage) return s;
+
+      const targetNode = activePage.nodes.find(n => n.id === nodeId);
+      if (!targetNode) return s;
+
+      const nextNodes = activePage.nodes.map(n => {
+        if (n.id !== nodeId) return n;
+        return {
+          ...n,
+          data: patch.data ? { ...patch.data } : n.data,
+          position: patch.position ? { ...patch.position } : n.position,
+          stylePreset: patch.stylePreset ?? n.stylePreset,
+        };
+      });
+
+      let nextEdges = activePage.edges;
+      if (targetNode.type === 'router' && patch.data) {
+        const inputTouched = Object.prototype.hasOwnProperty.call(patch.data, 'inputCount');
+        const outputTouched = Object.prototype.hasOwnProperty.call(patch.data, 'outputCount');
+
+        if (inputTouched || outputTouched) {
+          const nextInputCount = clampRouterHandleCount(
+            inputTouched ? patch.data.inputCount : targetNode.data.inputCount,
+            2,
+          );
+          const nextOutputCount = clampRouterHandleCount(
+            outputTouched ? patch.data.outputCount : targetNode.data.outputCount,
+            3,
+          );
+
+          nextEdges = activePage.edges.map(edge => {
+            if (edge.source !== nodeId && edge.target !== nodeId) return edge;
+
+            const nextSourceHandle = edge.source === nodeId
+              ? remapRouterHandle(edge.sourceHandle, 'out', nextOutputCount)
+              : edge.sourceHandle;
+            const nextTargetHandle = edge.target === nodeId
+              ? remapRouterHandle(edge.targetHandle, 'in', nextInputCount)
+              : edge.targetHandle;
+
+            if (nextSourceHandle === edge.sourceHandle && nextTargetHandle === edge.targetHandle) return edge;
+
+            return {
+              ...edge,
+              sourceHandle: nextSourceHandle,
+              targetHandle: nextTargetHandle,
+            };
+          });
+        }
+      }
+
+      return {
+        dirty: true,
+        project: {
+          ...s.project,
+          pages: updatePage(s.project.pages, s.activePageId, p => ({
+            ...p,
+            nodes: nextNodes,
+            edges: nextEdges,
+          })),
+        },
+      };
+    }),
 
     updateNodePosition: (nodeId, position) => withHistory(s => ({
       dirty: true,

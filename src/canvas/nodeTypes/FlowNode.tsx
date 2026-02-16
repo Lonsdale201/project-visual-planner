@@ -14,6 +14,7 @@ import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
+import TextFieldsOutlinedIcon from '@mui/icons-material/TextFieldsOutlined';
 import Prism from 'prismjs';
 import 'prismjs/components/prism-typescript';
 import 'prismjs/components/prism-javascript';
@@ -30,7 +31,7 @@ import remarkGfm from 'remark-gfm';
 import type { NodeKind, FlowDirection, Page } from '../../model/types';
 import { nodeTypeRegistry } from '../../model/registry';
 import { nodeColorMap } from '../../utils/nodeColors';
-import { parseDbSchema, type DbSchemaField } from '../../utils/parseDbSchema';
+import { parseDbSchema } from '../../utils/parseDbSchema';
 import { parseServiceEndpoints } from '../../utils/serviceEndpoints';
 import {
   stackPresets,
@@ -438,10 +439,7 @@ function getDetailRows(kind: NodeKind, data: Record<string, unknown>): Array<{ l
   }
 
   if (kind === 'router') {
-    return [
-      { label: 'In', value: String(clampHandleCount(data.inputCount, 2)) },
-      { label: 'Out', value: String(clampHandleCount(data.outputCount, 3)) },
-    ];
+    return [];
   }
 
   if (kind === 'integration') {
@@ -540,23 +538,12 @@ function NodePresetIcon({ kind, data }: { kind: NodeKind; data: Record<string, u
   );
 }
 
-const defaultDbSchemaFields: DbSchemaField[] = [
-  { name: 'id', type: 'uuid', constraints: 'pk' },
-  { name: 'email', type: 'varchar(255)', constraints: 'unique' },
-  { name: 'created_at', type: 'timestamp', constraints: 'not null' },
-  { name: 'updated_at', type: 'timestamp', constraints: 'not null' },
-];
-
 export default function FlowNode({ id, data, selected }: FlowNodeProps) {
   const direction = useProjectStore(s => s.project.ui.direction);
   const page = useProjectStore(s => selectActivePage(s));
   const allPages = useProjectStore(s => s.project.pages);
   const updateNodeData = useProjectStore(s => s.updateNodeData);
   const updateNodeInternals = useUpdateNodeInternals();
-
-  useEffect(() => {
-    updateNodeInternals(id);
-  }, [id, direction, updateNodeInternals]);
 
   const kind = data.nodeKind as NodeKind;
   if (!kind || !nodeTypeRegistry[kind]) {
@@ -578,7 +565,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
   const dbSchema = kind === 'database' ? parseDbSchema(dbSchemaSource) : [];
   const dbSchemaExpanded = kind === 'database' ? Boolean(data.dbSchemaExpanded) : false;
   const dbSchemaPreview = kind === 'database'
-    ? (hasDbSchemaInput ? dbSchema : defaultDbSchemaFields)
+    ? (hasDbSchemaInput ? dbSchema : [])
     : [];
   const dbSchemaPreviewRows = dbSchemaExpanded ? dbSchemaPreview : dbSchemaPreview.slice(0, 4);
   const dbSchemaExtraCount = dbSchemaExpanded ? 0 : Math.max(0, dbSchemaPreview.length - dbSchemaPreviewRows.length);
@@ -630,6 +617,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
   const overviewStats = kind === 'overview' ? collectOverviewStats(allPages) : null;
   const isOverview = kind === 'overview';
   const overviewMilestonesExpanded = isOverview ? Boolean(data.overviewMilestonesExpanded) : false;
+  const overviewStacksShowLabels = isOverview ? Boolean(data.overviewStacksShowLabels) : false;
   const overviewReleaseDate = isOverview ? toStr(data.releaseDate) : '';
   const overviewStacks = isOverview
     ? uniqueValues([
@@ -645,6 +633,9 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
   const outputHandleCount = kind === 'router'
     ? clampHandleCount(data.outputCount, def.outputHandles)
     : def.outputHandles;
+  useEffect(() => {
+    updateNodeInternals(id);
+  }, [id, direction, inputHandleCount, outputHandleCount, updateNodeInternals]);
   const hideMetaChip =
     kind === 'comment'
     || kind === 'action'
@@ -709,6 +700,12 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
     event.stopPropagation();
     if (!isOverview) return;
     updateNodeData(id, { overviewMilestonesExpanded: !overviewMilestonesExpanded });
+  };
+  const toggleOverviewStackLabels = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!isOverview) return;
+    updateNodeData(id, { overviewStacksShowLabels: !overviewStacksShowLabels });
   };
   const showPrevStackItem = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -992,131 +989,135 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                   <MarkdownText text={summary} mb={0.8} />
                 )}
 
-              <Box
-                sx={{
-                  borderRadius: 1.8,
-                  border: '1px solid #e7edf3',
-                  bgcolor: '#f9fbfe',
-                  overflow: 'hidden',
-                  mb: 0.85,
-                }}
-              >
-                {dbSchemaPreviewRows.length > 0 ? (
-                  <>
-                    <Stack
-                      direction="row"
-                      sx={{
-                        px: 1.1,
-                        py: 0.6,
-                        bgcolor: '#eef3f9',
-                        borderBottom: '1px solid #e2e9f2',
-                        color: '#5b6b80',
-                      }}
-                    >
-                      <Typography variant="caption" sx={{ fontWeight: 700, fontSize: 10.5, flex: 1 }}>
-                        Field
-                      </Typography>
-                      <Typography variant="caption" sx={{ fontWeight: 700, fontSize: 10.5, width: 110 }}>
-                        Type
-                      </Typography>
-                    </Stack>
-
-                    {dbSchemaPreviewRows.map(field => (
-                      <Stack
-                        key={field.name}
-                        direction="row"
-                        sx={{
-                          px: 1.1,
-                          py: 0.58,
-                          borderBottom: '1px solid #edf2f8',
-                          '&:last-of-type': { borderBottom: 'none' },
-                        }}
-                      >
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            flex: 1,
-                            color: '#1f2937',
-                            fontWeight: 600,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            pr: 0.8,
-                          }}
-                        >
-                          {field.name}
-                        </Typography>
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            width: 110,
-                            color: '#556579',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {field.type}
-                        </Typography>
-                      </Stack>
-                    ))}
-                  </>
-                ) : (
-                  <Typography sx={{ px: 1.1, py: 0.9, fontSize: 12, color: '#75849a' }}>
-                    Schema provided, but format is not recognized yet.
-                  </Typography>
-                )}
-              </Box>
-
-              <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', gap: 0.7 }}>
-                <Stack direction="row" spacing={0.65} sx={{ flexWrap: 'wrap', gap: 0.6 }}>
-                  <Chip
-                    label={`Columns: ${dbSchemaPreview.length}`}
-                    size="small"
+              {hasDbSchemaInput && (
+                <>
+                  <Box
                     sx={{
-                      height: 22,
-                      borderRadius: 1.7,
-                      bgcolor: '#f8fafc',
+                      borderRadius: 1.8,
                       border: '1px solid #e7edf3',
-                      color: '#4f5f72',
-                      '& .MuiChip-label': { fontSize: 11, fontWeight: 600, px: 1 },
-                    }}
-                  />
-                  {dbSchemaExtraCount > 0 && (
-                    <Chip
-                      label={`+${dbSchemaExtraCount} more`}
-                      size="small"
-                      sx={{
-                        height: 22,
-                        borderRadius: 1.7,
-                        bgcolor: '#f8fafc',
-                        border: '1px solid #e7edf3',
-                        color: '#4f5f72',
-                        '& .MuiChip-label': { fontSize: 11, fontWeight: 600, px: 1 },
-                      }}
-                    />
-                  )}
-                </Stack>
-                {dbSchemaPreview.length > 4 && (
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={toggleDbSchemaExpanded}
-                    sx={{
-                      textTransform: 'none',
-                      fontWeight: 700,
-                      borderColor: '#d6deea',
-                      color: '#42546b',
-                      borderRadius: 1.6,
-                      minWidth: 0,
-                      px: 1.05,
-                      py: 0.3,
+                      bgcolor: '#f9fbfe',
+                      overflow: 'hidden',
+                      mb: 0.85,
                     }}
                   >
-                    {dbSchemaExpanded ? 'Collapse' : 'Expand full schema'}
-                  </Button>
-                )}
-              </Stack>
+                    {dbSchemaPreviewRows.length > 0 ? (
+                      <>
+                        <Stack
+                          direction="row"
+                          sx={{
+                            px: 1.1,
+                            py: 0.6,
+                            bgcolor: '#eef3f9',
+                            borderBottom: '1px solid #e2e9f2',
+                            color: '#5b6b80',
+                          }}
+                        >
+                          <Typography variant="caption" sx={{ fontWeight: 700, fontSize: 10.5, flex: 1 }}>
+                            Field
+                          </Typography>
+                          <Typography variant="caption" sx={{ fontWeight: 700, fontSize: 10.5, width: 110 }}>
+                            Type
+                          </Typography>
+                        </Stack>
+
+                        {dbSchemaPreviewRows.map(field => (
+                          <Stack
+                            key={field.name}
+                            direction="row"
+                            sx={{
+                              px: 1.1,
+                              py: 0.58,
+                              borderBottom: '1px solid #edf2f8',
+                              '&:last-of-type': { borderBottom: 'none' },
+                            }}
+                          >
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                flex: 1,
+                                color: '#1f2937',
+                                fontWeight: 600,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                pr: 0.8,
+                              }}
+                            >
+                              {field.name}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                width: 110,
+                                color: '#556579',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {field.type}
+                            </Typography>
+                          </Stack>
+                        ))}
+                      </>
+                    ) : (
+                      <Typography sx={{ px: 1.1, py: 0.9, fontSize: 12, color: '#75849a' }}>
+                        Schema provided, but format is not recognized yet.
+                      </Typography>
+                    )}
+                  </Box>
+
+                  <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', gap: 0.7 }}>
+                    <Stack direction="row" spacing={0.65} sx={{ flexWrap: 'wrap', gap: 0.6 }}>
+                      <Chip
+                        label={`Columns: ${dbSchemaPreview.length}`}
+                        size="small"
+                        sx={{
+                          height: 22,
+                          borderRadius: 1.7,
+                          bgcolor: '#f8fafc',
+                          border: '1px solid #e7edf3',
+                          color: '#4f5f72',
+                          '& .MuiChip-label': { fontSize: 11, fontWeight: 600, px: 1 },
+                        }}
+                      />
+                      {dbSchemaExtraCount > 0 && (
+                        <Chip
+                          label={`+${dbSchemaExtraCount} more`}
+                          size="small"
+                          sx={{
+                            height: 22,
+                            borderRadius: 1.7,
+                            bgcolor: '#f8fafc',
+                            border: '1px solid #e7edf3',
+                            color: '#4f5f72',
+                            '& .MuiChip-label': { fontSize: 11, fontWeight: 600, px: 1 },
+                          }}
+                        />
+                      )}
+                    </Stack>
+                    {dbSchemaPreview.length > 4 && (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={toggleDbSchemaExpanded}
+                        sx={{
+                          textTransform: 'none',
+                          fontWeight: 700,
+                          borderColor: '#d6deea',
+                          color: '#42546b',
+                          borderRadius: 1.6,
+                          minWidth: 0,
+                          px: 1.05,
+                          py: 0.3,
+                        }}
+                      >
+                        {dbSchemaExpanded ? 'Collapse' : 'Expand full schema'}
+                      </Button>
+                    )}
+                  </Stack>
+                </>
+              )}
             </>
           ) : kind === 'overview' && overviewStats ? (
             <>
@@ -1193,9 +1194,27 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
               </Box>
 
               <Box sx={{ mt: 0.95, mb: 0.95 }}>
-                <Typography sx={{ fontSize: 12.5, fontWeight: 800, color: '#6c7789', letterSpacing: 0.3, mb: 0.65 }}>
-                  TECH STACK
-                </Typography>
+                <Stack direction="row" sx={{ alignItems: 'center', mb: 0.65 }}>
+                  <Typography sx={{ fontSize: 12.5, fontWeight: 800, color: '#6c7789', letterSpacing: 0.3 }}>
+                    TECH STACK
+                  </Typography>
+                  <Box sx={{ flexGrow: 1 }} />
+                  <Tooltip title={overviewStacksShowLabels ? 'Hide stack labels' : 'Show stack labels'}>
+                    <IconButton
+                      size="small"
+                      onClick={toggleOverviewStackLabels}
+                      sx={{
+                        width: 24,
+                        height: 24,
+                        border: '1px solid #d7dfea',
+                        borderRadius: 1.2,
+                        bgcolor: overviewStacksShowLabels ? '#edf3ff' : '#f8fafc',
+                      }}
+                    >
+                      <TextFieldsOutlinedIcon sx={{ fontSize: 14, color: '#3f5c8c' }} />
+                    </IconButton>
+                  </Tooltip>
+                </Stack>
                 <Stack direction="row" spacing={0.8} sx={{ flexWrap: 'wrap', gap: 0.8 }}>
                     {(overviewStacks.length ? overviewStacks : ['No stacks yet']).map((stackName, index) => {
                     const stackPreset =
@@ -1212,19 +1231,40 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
 
                     return (
                       <Tooltip key={`${stackName}-${index}`} title={stackName} arrow placement="top">
-                        <Box
-                          sx={{
-                            width: 44,
-                            height: 44,
-                            borderRadius: 1.6,
-                            border: '1px solid #dce4f0',
-                            bgcolor: '#fff',
-                            display: 'grid',
-                            placeItems: 'center',
-                            boxShadow: '0 1px 4px rgba(15, 23, 42, 0.06)',
-                          }}
-                        >
-                          <TechStackPresetIcon preset={stackPreset} size={24} plain />
+                        <Box sx={{ width: 74, minHeight: 44, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.45 }}>
+                          <Box
+                            sx={{
+                              width: 44,
+                              height: 44,
+                              borderRadius: 1.6,
+                              border: '1px solid #dce4f0',
+                              bgcolor: '#fff',
+                              display: 'grid',
+                              placeItems: 'center',
+                              boxShadow: '0 1px 4px rgba(15, 23, 42, 0.06)',
+                            }}
+                          >
+                            <TechStackPresetIcon preset={stackPreset} size={24} plain />
+                          </Box>
+                          {overviewStacksShowLabels && (
+                            <Typography
+                              sx={{
+                                width: '100%',
+                                fontSize: 10.5,
+                                color: '#6d7b8f',
+                                textAlign: 'center',
+                                lineHeight: 1.2,
+                                wordBreak: 'break-word',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                minHeight: 24,
+                              }}
+                            >
+                              {stackName}
+                            </Typography>
+                          )}
                         </Box>
                       </Tooltip>
                     );
