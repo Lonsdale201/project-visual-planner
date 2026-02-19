@@ -1,0 +1,284 @@
+{
+  "schemaVersion": "1.0.0",
+  "project": {
+    "id": "proj-blueprint-ecom-launch",
+    "name": "E-commerce Product Launch",
+    "description": "End-to-end business plan for launching a direct-to-consumer e-commerce brand, covering customer segments, product features, data model, marketing channels, and risk management.",
+    "createdAt": "2026-02-20T10:00:00.000Z",
+    "updatedAt": "2026-02-20T10:00:00.000Z"
+  },
+  "ui": {
+    "themePreset": "light",
+    "edgeType": "smoothstep",
+    "direction": "TOP_DOWN",
+    "edgeDashed": false,
+    "hideEdgeLabels": false,
+    "showMiniMap": true
+  },
+  "activeFlow": "business",
+  "pages": [
+    {
+      "id": "page-ecom-customers",
+      "name": "Customers & Features",
+      "viewport": { "x": -100, "y": -30, "zoom": 0.82 },
+      "nodes": [
+        {
+          "id": "spec-ecom",
+          "type": "spec",
+          "position": { "x": 360, "y": 20 },
+          "stylePreset": "teal",
+          "data": {
+            "title": "Launch Brief",
+            "body": "Direct-to-consumer brand launching a curated product line online. Phase 1: Shopify storefront with 20 SKUs, email marketing, and Instagram/TikTok acquisition. Goal: $50K revenue in first quarter with < $30 CAC.",
+            "includeInPdf": true
+          }
+        },
+        {
+          "id": "persona-shopper",
+          "type": "persona",
+          "position": { "x": 80, "y": 220 },
+          "stylePreset": "orange",
+          "data": {
+            "name": "Casual Shopper",
+            "role": "First-time buyer",
+            "painPoints": "Overwhelmed by choices on Amazon. Wants curated, trustworthy recommendations. Price-sensitive but willing to pay more for quality + brand story.",
+            "segment": ["25-40", "Urban", "Instagram-active"],
+            "priority": "high"
+          }
+        },
+        {
+          "id": "persona-loyalist",
+          "type": "persona",
+          "position": { "x": 480, "y": 220 },
+          "stylePreset": "orange",
+          "data": {
+            "name": "Brand Loyalist",
+            "role": "Repeat customer",
+            "painPoints": "Wants to feel part of a community. Expects VIP treatment, early access, and personalized recommendations based on purchase history.",
+            "segment": ["Repeat buyer", "Newsletter subscriber", "Referral source"],
+            "priority": "medium"
+          }
+        },
+        {
+          "id": "feature-storefront",
+          "type": "feature",
+          "position": { "x": 80, "y": 480 },
+          "stylePreset": "blue",
+          "data": {
+            "name": "Curated Storefront",
+            "description": "Clean, story-driven product pages with lifestyle photography, ingredient/material breakdowns, and social proof. Mobile-first design.",
+            "priority": "must",
+            "status": "planned",
+            "userStory": "As a casual shopper, I want to quickly understand why this product is worth it so I can decide without reading 50 reviews."
+          }
+        },
+        {
+          "id": "feature-subscription",
+          "type": "feature",
+          "position": { "x": 480, "y": 480 },
+          "stylePreset": "blue",
+          "data": {
+            "name": "Subscribe & Save",
+            "description": "Monthly subscription boxes with 10% discount. Customizable frequency and product selection. Skip/pause anytime.",
+            "priority": "should",
+            "status": "planned",
+            "userStory": "As a loyal customer, I want to auto-receive my favorites monthly so I never run out and save money."
+          }
+        },
+        {
+          "id": "feature-referral",
+          "type": "feature",
+          "position": { "x": 280, "y": 700 },
+          "stylePreset": "blue",
+          "data": {
+            "name": "Referral Program",
+            "description": "Give $10, get $10 referral system. Unique shareable links. Track referral conversions and reward payouts.",
+            "priority": "should",
+            "status": "planned",
+            "userStory": "As a happy customer, I want to share a referral link with friends so we both benefit."
+          }
+        },
+        {
+          "id": "entity-customer",
+          "type": "dataEntity",
+          "position": { "x": 680, "y": 480 },
+          "stylePreset": "green",
+          "data": {
+            "name": "Customer",
+            "description": "Unified customer profile combining Shopify customer data, email engagement, and purchase history.",
+            "attributes": ["email", "name", "lifetime_value", "order_count", "last_purchase", "referral_code", "segment_tags"],
+            "source": "Shopify + Klaviyo",
+            "owner": "Marketing"
+          }
+        },
+        {
+          "id": "entity-order",
+          "type": "dataEntity",
+          "position": { "x": 880, "y": 480 },
+          "stylePreset": "green",
+          "data": {
+            "name": "Order",
+            "description": "Transaction record with line items, discount codes applied, shipping status, and fulfillment tracking.",
+            "attributes": ["order_id", "customer_id", "items", "total", "discount_code", "status", "fulfillment_date"],
+            "source": "Shopify",
+            "owner": "Operations"
+          }
+        }
+      ],
+      "edges": [
+        { "id": "e-shopper-store", "source": "persona-shopper", "target": "feature-storefront", "type": "smoothstep", "label": "converts via" },
+        { "id": "e-loyalist-sub", "source": "persona-loyalist", "target": "feature-subscription", "type": "smoothstep", "label": "retains via" },
+        { "id": "e-loyalist-referral", "source": "persona-loyalist", "target": "feature-referral", "type": "smoothstep", "label": "grows via" },
+        { "id": "e-store-referral", "source": "feature-storefront", "target": "feature-referral", "type": "smoothstep", "label": "drives" },
+        { "id": "e-sub-customer", "source": "feature-subscription", "target": "entity-customer", "type": "smoothstep", "label": "enriches" },
+        { "id": "e-store-order", "source": "feature-storefront", "target": "entity-order", "type": "smoothstep", "label": "creates" }
+      ]
+    },
+    {
+      "id": "page-ecom-growth",
+      "name": "Growth & Risks",
+      "viewport": { "x": -100, "y": -30, "zoom": 0.82 },
+      "nodes": [
+        {
+          "id": "channel-instagram",
+          "type": "channel",
+          "position": { "x": 80, "y": 60 },
+          "stylePreset": "purple",
+          "data": {
+            "name": "Instagram + TikTok",
+            "channelType": "social",
+            "direction": "inbound",
+            "metric": "Cost per acquisition (CPA)",
+            "notes": "Organic content + paid ads. UGC-focused creative. Influencer micro-partnerships (10-50K followers). Target CPA: < $15."
+          }
+        },
+        {
+          "id": "channel-email",
+          "type": "channel",
+          "position": { "x": 440, "y": 60 },
+          "stylePreset": "purple",
+          "data": {
+            "name": "Email / Klaviyo",
+            "channelType": "email",
+            "direction": "outbound",
+            "metric": "Revenue per email",
+            "notes": "Welcome series (5 emails), abandoned cart recovery, post-purchase flow, VIP early access. Target: 30% of revenue from email."
+          }
+        },
+        {
+          "id": "channel-seo",
+          "type": "channel",
+          "position": { "x": 800, "y": 60 },
+          "stylePreset": "purple",
+          "data": {
+            "name": "SEO & Content",
+            "channelType": "social",
+            "direction": "inbound",
+            "metric": "Organic traffic / month",
+            "notes": "Buying guides, ingredient deep-dives, lifestyle blog. Long-tail keywords targeting 'best [category] for [use case]'."
+          }
+        },
+        {
+          "id": "kpi-revenue",
+          "type": "kpi",
+          "position": { "x": 80, "y": 320 },
+          "stylePreset": "red",
+          "data": {
+            "name": "Quarterly Revenue",
+            "target": "$50K",
+            "unit": "USD",
+            "measurement": "Shopify Analytics — gross revenue minus refunds. Tracked weekly with cumulative target line.",
+            "owner": "Founder"
+          }
+        },
+        {
+          "id": "kpi-cac",
+          "type": "kpi",
+          "position": { "x": 440, "y": 320 },
+          "stylePreset": "red",
+          "data": {
+            "name": "Customer Acq. Cost",
+            "target": "< $30",
+            "unit": "USD/customer",
+            "measurement": "Total ad spend / new customers acquired. Blended across all paid channels.",
+            "owner": "Marketing"
+          }
+        },
+        {
+          "id": "kpi-repeat",
+          "type": "kpi",
+          "position": { "x": 800, "y": 320 },
+          "stylePreset": "red",
+          "data": {
+            "name": "Repeat Purchase Rate",
+            "target": "> 25%",
+            "unit": "%",
+            "measurement": "% of customers who place a 2nd order within 90 days. Tracked in Shopify customer reports.",
+            "owner": "CX team"
+          }
+        },
+        {
+          "id": "risk-inventory",
+          "type": "risk",
+          "position": { "x": 80, "y": 560 },
+          "stylePreset": "orange",
+          "data": {
+            "name": "Inventory Overstock",
+            "impact": "high",
+            "likelihood": "medium",
+            "mitigation": "Start with small batches (50-100 units per SKU). Use pre-orders to gauge demand before bulk manufacturing. Negotiate return clauses with suppliers.",
+            "status": "open"
+          }
+        },
+        {
+          "id": "risk-cac",
+          "type": "risk",
+          "position": { "x": 440, "y": 560 },
+          "stylePreset": "orange",
+          "data": {
+            "name": "Rising Ad Costs",
+            "impact": "medium",
+            "likelihood": "high",
+            "mitigation": "Diversify beyond paid social. Invest in organic/SEO and email. Build referral flywheel. Target 50% of traffic from non-paid sources by month 6.",
+            "status": "open"
+          }
+        },
+        {
+          "id": "risk-shipping",
+          "type": "risk",
+          "position": { "x": 800, "y": 560 },
+          "stylePreset": "orange",
+          "data": {
+            "name": "Shipping Delays",
+            "impact": "medium",
+            "likelihood": "medium",
+            "mitigation": "Use 2 fulfillment partners (primary + backup). Set customer expectations with realistic delivery windows. Offer tracking + proactive delay notifications.",
+            "status": "open"
+          }
+        },
+        {
+          "id": "bridge-dev",
+          "type": "bridge",
+          "position": { "x": 440, "y": 760 },
+          "stylePreset": "teal",
+          "data": {
+            "name": "Tech Implementation",
+            "toFlow": "development",
+            "toPageId": "",
+            "toNodeId": "",
+            "syncFields": ["storefront", "integrations", "analytics"],
+            "notes": "Shopify theme customization, Klaviyo integration, analytics dashboard setup, and referral system implementation."
+          }
+        }
+      ],
+      "edges": [
+        { "id": "e-ig-revenue", "source": "channel-instagram", "target": "kpi-revenue", "type": "smoothstep", "label": "drives" },
+        { "id": "e-ig-cac", "source": "channel-instagram", "target": "kpi-cac", "type": "smoothstep", "label": "impacts" },
+        { "id": "e-email-repeat", "source": "channel-email", "target": "kpi-repeat", "type": "smoothstep", "label": "drives" },
+        { "id": "e-email-revenue", "source": "channel-email", "target": "kpi-revenue", "type": "smoothstep", "label": "contributes" },
+        { "id": "e-seo-cac", "source": "channel-seo", "target": "kpi-cac", "type": "smoothstep", "label": "reduces" },
+        { "id": "e-revenue-bridge", "source": "kpi-revenue", "target": "bridge-dev", "type": "smoothstep", "label": "requires" }
+      ]
+    }
+  ]
+}

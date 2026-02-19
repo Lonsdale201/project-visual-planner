@@ -1,8 +1,11 @@
 import { v4 as uuid } from 'uuid';
-import type { Project, Page, ProjectNode, NodeKind, FlowDirection } from '../model/types';
+import type { Project, Page, ProjectNode, NodeKind, FlowDirection, FlowMode } from '../model/types';
+import { nodeTypeRegistry } from '../model/registry';
 import projectManagerSaasRaw from './data/project-manager-saas.knitflow.json';
 import aiApiStarterRaw from './data/ai-api-starter.knitflow.json';
 import wpLmsPluginRaw from './data/wp-lms-plugin.knitflow.json';
+import saasGtmRaw from './data/saas-go-to-market.knitflow.json';
+import ecomLaunchRaw from './data/ecommerce-product-launch.knitflow.json';
 
 export interface BlueprintPresetMeta {
   id: string;
@@ -10,6 +13,7 @@ export interface BlueprintPresetMeta {
   summary: string;
   tags: string[];
   pageCount: number;
+  flow: FlowMode;
 }
 
 interface BlueprintPreset extends BlueprintPresetMeta {
@@ -23,6 +27,7 @@ const blueprintPresetsInternal: BlueprintPreset[] = [
     summary: 'Full-stack collaborative PM system with AI, integrations, milestones, and delivery flow.',
     tags: ['full', 'saas', 'ai', 'collaboration'],
     pageCount: (projectManagerSaasRaw as Project).pages.length,
+    flow: 'development',
     project: projectManagerSaasRaw as Project,
   },
   {
@@ -31,6 +36,7 @@ const blueprintPresetsInternal: BlueprintPreset[] = [
     summary: 'Lean starter architecture for auth + core API + DB + one external notification integration.',
     tags: ['starter', 'api', 'ai'],
     pageCount: (aiApiStarterRaw as Project).pages.length,
+    flow: 'development',
     project: aiApiStarterRaw as Project,
   },
   {
@@ -39,11 +45,243 @@ const blueprintPresetsInternal: BlueprintPreset[] = [
     summary: 'WP LMS plugin architecture with custom table CRUD, ORM/DTO/Presenter pattern, and split domain flows.',
     tags: ['wordpress', 'plugin', 'lms', 'crud'],
     pageCount: (wpLmsPluginRaw as Project).pages.length,
+    flow: 'development',
     project: wpLmsPluginRaw as Project,
+  },
+  {
+    id: 'saas-go-to-market',
+    name: 'SaaS Go-to-Market',
+    summary: 'B2B SaaS launch strategy with personas, PLG features, acquisition channels, KPI targets, and risk mitigation.',
+    tags: ['saas', 'gtm', 'b2b', 'plg'],
+    pageCount: (saasGtmRaw as Project).pages.length,
+    flow: 'business',
+    project: saasGtmRaw as Project,
+  },
+  {
+    id: 'ecommerce-product-launch',
+    name: 'E-commerce Product Launch',
+    summary: 'DTC brand launch plan with customer segments, Shopify features, marketing channels, unit economics, and supply chain risks.',
+    tags: ['ecommerce', 'dtc', 'shopify', 'launch'],
+    pageCount: (ecomLaunchRaw as Project).pages.length,
+    flow: 'business',
+    project: ecomLaunchRaw as Project,
   },
 ];
 
 export const blueprintPresets: BlueprintPresetMeta[] = blueprintPresetsInternal.map(({ project: _project, ...meta }) => meta);
+
+function createDevelopmentFlowStarterPage(): Page {
+  const pageId = uuid();
+  const overviewId = uuid();
+  const serviceId = uuid();
+  const databaseId = uuid();
+  const integrationId = uuid();
+  const bridgeId = uuid();
+  const milestoneId = uuid();
+
+  return {
+    id: pageId,
+    name: 'Development Starter',
+    viewport: { x: -120, y: -40, zoom: 0.92 },
+    nodes: [
+      {
+        id: overviewId,
+        type: 'overview',
+        position: { x: 320, y: 24 },
+        stylePreset: 'teal',
+        data: {
+          title: 'Development Flow Overview',
+          description: 'Implementation-focused flow from service design to delivery milestone.',
+          stacks: ['Architecture', 'API', 'Data', 'Delivery'],
+          releaseDate: 'TBD',
+          overviewMilestonesExpanded: false,
+          overviewStacksShowLabels: false,
+        },
+      },
+      {
+        id: serviceId,
+        type: 'service',
+        position: { x: 120, y: 300 },
+        stylePreset: 'blue',
+        data: {
+          name: 'Core Service',
+          tag: 'API',
+          description: 'Main implementation stream for business requirements.',
+          endpoints: [
+            { id: 'starter-create', method: 'POST', route: '/api/items' },
+            { id: 'starter-list', method: 'GET', route: '/api/items' },
+          ],
+          notes: 'Connect to data and downstream integrations.',
+        },
+      },
+      {
+        id: databaseId,
+        type: 'database',
+        position: { x: 460, y: 300 },
+        stylePreset: 'green',
+        data: {
+          name: 'Primary Data',
+          dbType: 'postgres',
+          connectionNotes: 'Main relational store for core entities.',
+          schemaNotes: '',
+          dbSchemaExpanded: false,
+        },
+      },
+      {
+        id: integrationId,
+        type: 'integration',
+        position: { x: 800, y: 300 },
+        stylePreset: 'purple',
+        data: {
+          name: 'External Channel',
+          boundary: 'external',
+          baseUrl: 'https://api.example.com',
+          authMethod: 'Bearer token',
+          requestNotes: 'Delivery notifications and callbacks.',
+        },
+      },
+      {
+        id: bridgeId,
+        type: 'bridge',
+        position: { x: 800, y: 520 },
+        stylePreset: 'teal',
+        data: {
+          name: 'Bridge to Business',
+          toFlow: 'business',
+          toPageId: '',
+          toNodeId: '',
+          syncFields: ['scope', 'kpi'],
+          notes: 'Handoff implementation outcomes back to business brief flow.',
+        },
+      },
+      {
+        id: milestoneId,
+        type: 'milestone',
+        position: { x: 120, y: 520 },
+        stylePreset: 'red',
+        data: {
+          title: 'Implementation Gate',
+          milestoneLabel: 'Milestone 1',
+          order: 1,
+          goal: 'Deliver a testable end-to-end vertical slice.',
+          dueDate: '',
+          priority: 'high',
+        },
+      },
+    ],
+    edges: [
+      { id: uuid(), source: overviewId, target: serviceId, type: 'smoothstep', label: 'scope' },
+      { id: uuid(), source: serviceId, target: databaseId, type: 'smoothstep', label: 'data' },
+      { id: uuid(), source: serviceId, target: integrationId, type: 'smoothstep', label: 'events' },
+      { id: uuid(), source: serviceId, target: bridgeId, type: 'smoothstep', label: 'handoff' },
+      { id: uuid(), source: bridgeId, target: milestoneId, type: 'smoothstep', label: 'delivery' },
+    ],
+  };
+}
+
+function createBusinessFlowStarterPage(): Page {
+  const pageId = uuid();
+  const personaId = uuid();
+  const featureId = uuid();
+  const dataEntityId = uuid();
+  const channelId = uuid();
+  const kpiId = uuid();
+  const bridgeId = uuid();
+
+  return {
+    id: pageId,
+    name: 'Business Planning Starter',
+    viewport: { x: -120, y: -40, zoom: 0.92 },
+    nodes: [
+      {
+        id: personaId,
+        type: 'persona',
+        position: { x: 120, y: 160 },
+        stylePreset: 'orange',
+        data: {
+          name: 'Primary User',
+          role: 'Decision maker',
+          painPoints: 'Needs a clear, consolidated view of data from multiple sources.',
+          segment: ['SMB'],
+          priority: 'high',
+        },
+      },
+      {
+        id: featureId,
+        type: 'feature',
+        position: { x: 460, y: 160 },
+        stylePreset: 'blue',
+        data: {
+          name: 'Core Feature',
+          description: 'The key capability that solves the persona\'s primary pain point.',
+          priority: 'must',
+          status: 'planned',
+          userStory: 'As a user, I want to see all relevant data in one place.',
+        },
+      },
+      {
+        id: dataEntityId,
+        type: 'dataEntity',
+        position: { x: 460, y: 380 },
+        stylePreset: 'green',
+        data: {
+          name: 'Core Entity',
+          description: 'The primary data object this feature operates on.',
+          attributes: ['id', 'name', 'email', 'source'],
+          source: 'External system',
+          owner: 'Platform',
+        },
+      },
+      {
+        id: channelId,
+        type: 'channel',
+        position: { x: 800, y: 160 },
+        stylePreset: 'purple',
+        data: {
+          name: 'Primary Channel',
+          channelType: 'sync',
+          direction: 'inbound',
+          metric: 'Sync latency',
+          notes: 'Main data ingestion or distribution channel.',
+        },
+      },
+      {
+        id: kpiId,
+        type: 'kpi',
+        position: { x: 800, y: 380 },
+        stylePreset: 'red',
+        data: {
+          name: 'Success Metric',
+          target: 'TBD',
+          unit: '',
+          measurement: 'Define how this metric is tracked and reported.',
+          owner: '',
+        },
+      },
+      {
+        id: bridgeId,
+        type: 'bridge',
+        position: { x: 120, y: 380 },
+        stylePreset: 'teal',
+        data: {
+          name: 'Handoff to Development',
+          toFlow: 'development',
+          toPageId: '',
+          toNodeId: '',
+          syncFields: ['scope', 'priority'],
+          notes: 'Translate business decisions into delivery scope.',
+        },
+      },
+    ],
+    edges: [
+      { id: uuid(), source: personaId, target: featureId, type: 'smoothstep', label: 'needs' },
+      { id: uuid(), source: featureId, target: channelId, type: 'smoothstep', label: 'via' },
+      { id: uuid(), source: featureId, target: dataEntityId, type: 'smoothstep', label: 'operates on' },
+      { id: uuid(), source: channelId, target: kpiId, type: 'smoothstep', label: 'measures' },
+      { id: uuid(), source: featureId, target: bridgeId, type: 'smoothstep', label: 'handoff' },
+    ],
+  };
+}
 
 function cloneProject(project: Project): Project {
   if (typeof structuredClone === 'function') return structuredClone(project);
@@ -101,6 +339,7 @@ function realignNodesToDirection(
 function getNodeWidth(type: NodeKind): number {
   if (type === 'overview') return 540;
   if (type === 'code') return 390;
+  if (type === 'brand') return 88;
   return 340;
 }
 
@@ -123,6 +362,8 @@ function getNodeHeight(node: ProjectNode): number {
       return 170;
     case 'integration':
       return 185;
+    case 'brand':
+      return 88;
     case 'action':
       return 170;
     case 'comment':
@@ -131,6 +372,56 @@ function getNodeHeight(node: ProjectNode): number {
     default:
       return 165;
   }
+}
+
+function normalizeHandleId(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const normalized = value.trim();
+  if (!normalized) return undefined;
+  const lower = normalized.toLowerCase();
+  if (lower === 'null' || lower === 'undefined') return undefined;
+  return normalized;
+}
+
+function toFiniteNumber(value: unknown, fallback: number): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+}
+
+function clampHandleCount(value: unknown, fallback: number): number {
+  const rounded = Math.round(toFiniteNumber(value, fallback));
+  if (!Number.isFinite(rounded)) return fallback;
+  return Math.max(0, Math.min(8, rounded));
+}
+
+function getSourceHandleCount(node: ProjectNode | undefined): number {
+  if (!node) return 0;
+  const def = nodeTypeRegistry[node.type];
+  return node.type === 'router'
+    ? clampHandleCount(node.data.outputCount, def.outputHandles)
+    : def.outputHandles;
+}
+
+function getTargetHandleCount(node: ProjectNode | undefined): number {
+  if (!node) return 0;
+  const def = nodeTypeRegistry[node.type];
+  return node.type === 'router'
+    ? clampHandleCount(node.data.inputCount, def.inputHandles)
+    : def.inputHandles;
+}
+
+function getDefaultSourceHandle(node: ProjectNode | undefined): string | undefined {
+  const count = getSourceHandleCount(node);
+  return count > 0 ? 'out-0' : undefined;
+}
+
+function getDefaultTargetHandle(node: ProjectNode | undefined): string | undefined {
+  const count = getTargetHandleCount(node);
+  return count > 0 ? 'in-0' : undefined;
 }
 
 function overlaps(a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }, gap = 26): boolean {
@@ -372,20 +663,32 @@ function remapPageIdsSafe(page: Page): Page {
       data: cloneNodeData(node.data),
     };
   });
+  const nodeById = new Map(nodes.map(node => [node.id, node]));
 
   const edges = page.edges
-    .map(edge => {
+    .flatMap(edge => {
       const newSource = nodeIdMap.get(edge.source);
       const newTarget = nodeIdMap.get(edge.target);
-      if (!newSource || !newTarget) return null;
-      return {
+      if (!newSource || !newTarget) return [];
+      const sourceNode = nodeById.get(newSource);
+      const targetNode = nodeById.get(newTarget);
+      const sourceCount = getSourceHandleCount(sourceNode);
+      const targetCount = getTargetHandleCount(targetNode);
+      if (sourceCount <= 0 || targetCount <= 0) return [];
+
+      const sourceHandle = normalizeHandleId(edge.sourceHandle) ?? getDefaultSourceHandle(sourceNode);
+      const targetHandle = normalizeHandleId(edge.targetHandle) ?? getDefaultTargetHandle(targetNode);
+      if (!sourceHandle || !targetHandle) return [];
+
+      return [{
         ...edge,
         id: uuid(),
         source: newSource,
         target: newTarget,
-      };
-    })
-    .filter((edge): edge is Page['edges'][number] => edge !== null);
+        sourceHandle,
+        targetHandle,
+      }];
+    });
 
   return {
     ...page,
@@ -443,5 +746,13 @@ export function instantiateBlueprintPages(presetId: string, direction: FlowDirec
   const raw = getBlueprintProjectInternal(presetId);
   const remappedPages = raw.pages.map(page => remapPageIdsSafe(page));
   const directedPages = applyDirectionToPages(remappedPages, direction);
+  return directedPages.map(page => autoResolveNodeOverlaps(page, direction));
+}
+
+export function instantiateFlowStarterPages(flow: FlowMode, direction: FlowDirection = 'TOP_DOWN'): Page[] {
+  const starter = flow === 'business'
+    ? createBusinessFlowStarterPage()
+    : createDevelopmentFlowStarterPage();
+  const directedPages = applyDirectionToPages([starter], direction);
   return directedPages.map(page => autoResolveNodeOverlaps(page, direction));
 }

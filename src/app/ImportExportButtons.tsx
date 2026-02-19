@@ -4,8 +4,10 @@ import {
 } from '@mui/material';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
 import FileUploadOutlinedIcon from '@mui/icons-material/FileUploadOutlined';
+import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
 import { useProjectStore } from '../store/useProjectStore';
 import { exportProjectToFile } from '../io/exportProject';
+import { exportProjectToPdf } from '../io/exportPdf';
 import { importProjectFromFile } from '../io/importProject';
 
 export default function ImportExportButtons() {
@@ -19,6 +21,12 @@ export default function ImportExportButtons() {
     const data = getExportData();
     exportProjectToFile(data);
     setSnack({ message: 'Project exported!', severity: 'success' });
+  };
+
+  const handleExportPdf = () => {
+    const data = getExportData();
+    exportProjectToPdf(data);
+    setSnack({ message: 'PDF exported!', severity: 'success' });
   };
 
   const handleImport = async () => {
@@ -39,9 +47,14 @@ export default function ImportExportButtons() {
           <FileUploadOutlinedIcon />
         </IconButton>
       </Tooltip>
-      <Tooltip title="Export Project">
+      <Tooltip title="Export JSON">
         <IconButton color="inherit" onClick={handleExport}>
           <FileDownloadOutlinedIcon />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Export PDF">
+        <IconButton color="inherit" onClick={handleExportPdf}>
+          <PictureAsPdfOutlinedIcon />
         </IconButton>
       </Tooltip>
 

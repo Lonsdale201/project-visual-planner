@@ -176,10 +176,27 @@ interface IntegrationPresetIconProps {
   plain?: boolean;
 }
 
-export function IntegrationPresetIcon({ preset, size = 20 }: IntegrationPresetIconProps) {
+export function IntegrationPresetIcon({ preset, size = 20, plain = false }: IntegrationPresetIconProps) {
   const Icon = preset ? integrationIconByValue[preset.value] : undefined;
   const bg = preset?.bg ?? '#eef2f7';
   const color = preset?.color ?? '#64748b';
+
+  if (plain) {
+    return (
+      <Box
+        sx={{
+          width: size,
+          height: size,
+          color,
+          display: 'grid',
+          placeItems: 'center',
+          flexShrink: 0,
+        }}
+      >
+        {Icon ? <Icon size={size * 0.88} /> : <ApiOutlinedIcon sx={{ fontSize: size * 0.88 }} />}
+      </Box>
+    );
+  }
 
   return (
     <Box

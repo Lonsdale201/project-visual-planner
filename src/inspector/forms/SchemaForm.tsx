@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import {
-  TextField, MenuItem, Chip, Box, Stack, Typography, Autocomplete, InputAdornment, IconButton, Button,
+  TextField, MenuItem, Chip, Box, Stack, Typography, Autocomplete, InputAdornment, IconButton, Button, FormControlLabel, Switch,
 } from '@mui/material';
 import CloudOutlinedIcon from '@mui/icons-material/CloudOutlined';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
@@ -336,6 +336,20 @@ export default function SchemaForm({ fields, data, nodeKind, onChange }: SchemaF
           );
         }
 
+        if (field.type === 'string' && nodeKind === 'brand' && field.key === 'brand') {
+          return (
+            <PresetSelectField
+              key={field.key}
+              field={field}
+              value={(value as string) ?? ''}
+              options={integrationPresets}
+              customLabel="Custom brand"
+              iconMode="integration"
+              onChange={nextValue => onChange(field.key, nextValue)}
+            />
+          );
+        }
+
         if (field.type === 'string' && nodeKind === 'infra' && field.key === 'provider') {
           return (
             <PresetSelectField
@@ -521,6 +535,20 @@ export default function SchemaForm({ fields, data, nodeKind, onChange }: SchemaF
                 size="small"
                 fullWidth
                 placeholder={field.placeholder}
+              />
+            );
+
+          case 'boolean':
+            return (
+              <FormControlLabel
+                key={field.key}
+                control={(
+                  <Switch
+                    checked={Boolean(value)}
+                    onChange={(_, checked) => onChange(field.key, checked)}
+                  />
+                )}
+                label={field.label}
               />
             );
 

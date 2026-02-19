@@ -6,18 +6,28 @@ export type ThemePreset = 'light' | 'dark';
 
 export type NodeKind =
   | 'service'
+  | 'workstream'
+  | 'bridge'
   | 'router'
   | 'stack'
   | 'action'
   | 'database'
   | 'infra'
   | 'framework'
+  | 'capability'
   | 'integration'
+  | 'brand'
   | 'code'
   | 'overview'
   | 'comment'
   | 'spec'
-  | 'milestone';
+  | 'milestone'
+  | 'persona'
+  | 'feature'
+  | 'dataEntity'
+  | 'channel'
+  | 'kpi'
+  | 'risk';
 
 // ── Style presets for nodes ──
 export type NodeStylePreset =
@@ -47,10 +57,27 @@ export interface ServiceData {
   notes: string;
 }
 
+export interface WorkstreamData {
+  name: string;
+  owner: string;
+  objective: string;
+  deliverables: string[];
+  notes: string;
+}
+
 export interface ActionData {
   name: string;
   tag: string;
   comment: string;
+}
+
+export interface BridgeData {
+  name: string;
+  toFlow: FlowMode;
+  toPageId: string;
+  toNodeId: string;
+  syncFields: string[];
+  notes: string;
 }
 
 export interface RouterData {
@@ -114,12 +141,24 @@ export interface FrameworkData {
   notes: string;
 }
 
+export interface CapabilityData {
+  name: string;
+  area: string;
+  maturity: 'low' | 'medium' | 'high';
+  gap: string;
+  notes: string;
+}
+
 export interface IntegrationData {
   name: string;
   boundary: 'internal' | 'external';
   baseUrl: string;
   authMethod: string;
   requestNotes: string;
+}
+
+export interface BrandData {
+  brand: string;
 }
 
 export interface OverviewData {
@@ -141,6 +180,7 @@ export interface CommentData {
   title: string;
   body: string;
   attachedTo?: string;
+  sticky?: boolean;
 }
 
 export interface SpecData {
@@ -157,20 +197,78 @@ export interface MilestoneData {
   priority: 'low' | 'medium' | 'high' | 'critical';
 }
 
+export interface PersonaData {
+  name: string;
+  role: string;
+  painPoints: string;
+  segment: string[];
+  priority: 'low' | 'medium' | 'high';
+}
+
+export interface FeatureData {
+  name: string;
+  description: string;
+  priority: 'must' | 'should' | 'could' | 'wont';
+  status: 'planned' | 'in-progress' | 'done';
+  userStory: string;
+}
+
+export interface DataEntityData {
+  name: string;
+  description: string;
+  attributes: string[];
+  source: string;
+  owner: string;
+}
+
+export interface ChannelData {
+  name: string;
+  channelType: 'sync' | 'webhook' | 'embed' | 'email' | 'manual' | 'social' | 'paid';
+  direction: 'inbound' | 'outbound' | 'both';
+  metric: string;
+  notes: string;
+}
+
+export interface KpiData {
+  name: string;
+  target: string;
+  unit: string;
+  measurement: string;
+  owner: string;
+}
+
+export interface RiskData {
+  name: string;
+  impact: 'low' | 'medium' | 'high' | 'critical';
+  likelihood: 'low' | 'medium' | 'high';
+  mitigation: string;
+  status: 'open' | 'mitigated' | 'accepted';
+}
+
 export type NodeDataMap = {
   service: ServiceData;
+  workstream: WorkstreamData;
+  bridge: BridgeData;
   router: RouterData;
   stack: StackData;
   action: ActionData;
   database: DatabaseData;
   infra: InfraData;
   framework: FrameworkData;
+  capability: CapabilityData;
   integration: IntegrationData;
+  brand: BrandData;
   code: CodeData;
   overview: OverviewData;
   comment: CommentData;
   spec: SpecData;
   milestone: MilestoneData;
+  persona: PersonaData;
+  feature: FeatureData;
+  dataEntity: DataEntityData;
+  channel: ChannelData;
+  kpi: KpiData;
+  risk: RiskData;
 };
 
 // ── Node data as flexible record (schema-driven) ──
@@ -222,6 +320,7 @@ export interface ProjectUI {
   edgeDashed: boolean;
   hideEdgeLabels: boolean;
   showMiniMap: boolean;
+  pdfIncludeEdgeLabels?: boolean;
 }
 
 export interface ProjectMeta {
@@ -232,9 +331,23 @@ export interface ProjectMeta {
   updatedAt: string;
 }
 
+export type FlowMode = 'development' | 'business';
+
+export interface FlowGraph {
+  ui: ProjectUI;
+  pages: Page[];
+}
+
+export interface ProjectFlows {
+  development: FlowGraph;
+  business: FlowGraph;
+}
+
 export interface Project {
   schemaVersion: string;
   project: ProjectMeta;
   ui: ProjectUI;
   pages: Page[];
+  activeFlow?: FlowMode;
+  flows?: ProjectFlows;
 }

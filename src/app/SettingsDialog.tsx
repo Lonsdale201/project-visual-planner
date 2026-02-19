@@ -86,6 +86,20 @@ export default function SettingsDialog({ open, onClose }: Props) {
             label="Show mini map"
           />
 
+          <Divider />
+          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>PDF Export</Typography>
+
+          <FormControlLabel
+            control={(
+              <Switch
+                checked={Boolean(project.ui.pdfIncludeEdgeLabels)}
+                onChange={e => setUI({ pdfIncludeEdgeLabels: e.target.checked })}
+              />
+            )}
+            label="Include edge labels in PDF"
+          />
+
+          <Divider />
           <TextField
             label="Flow Direction"
             value={project.ui.direction}

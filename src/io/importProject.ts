@@ -1,5 +1,6 @@
 import type { Project } from '../model/types';
 import { validateProjectJson, type ValidationResult } from './validateProject';
+import { migrateProjectToFlowModel } from '../model/projectMigration';
 
 export function importProjectFromFile(): Promise<{ project: Project | null; validation: ValidationResult }> {
   return new Promise((resolve) => {
@@ -20,7 +21,7 @@ export function importProjectFromFile(): Promise<{ project: Project | null; vali
         const validation = validateProjectJson(data);
 
         if (validation.valid) {
-          resolve({ project: data as Project, validation });
+          resolve({ project: migrateProjectToFlowModel(data as Project), validation });
         } else {
           resolve({ project: null, validation });
         }

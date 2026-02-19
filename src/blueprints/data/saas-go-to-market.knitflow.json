@@ -1,0 +1,235 @@
+{
+  "schemaVersion": "1.0.0",
+  "project": {
+    "id": "proj-blueprint-saas-gtm",
+    "name": "SaaS Go-to-Market Plan",
+    "description": "Complete go-to-market strategy for a B2B SaaS product launch, from persona mapping through acquisition channels to success metrics.",
+    "createdAt": "2026-02-20T10:00:00.000Z",
+    "updatedAt": "2026-02-20T10:00:00.000Z"
+  },
+  "ui": {
+    "themePreset": "light",
+    "edgeType": "smoothstep",
+    "direction": "TOP_DOWN",
+    "edgeDashed": false,
+    "hideEdgeLabels": false,
+    "showMiniMap": true
+  },
+  "activeFlow": "business",
+  "pages": [
+    {
+      "id": "page-gtm-strategy",
+      "name": "GTM Strategy",
+      "viewport": { "x": -100, "y": -30, "zoom": 0.82 },
+      "nodes": [
+        {
+          "id": "spec-gtm",
+          "type": "spec",
+          "position": { "x": 400, "y": 20 },
+          "stylePreset": "teal",
+          "data": {
+            "title": "Go-to-Market Brief",
+            "body": "Launch a B2B SaaS product targeting SMB operations teams. Phase 1 focuses on product-led growth with freemium onboarding, content marketing, and strategic integrations. Target: 500 active accounts within 6 months of launch.",
+            "includeInPdf": true
+          }
+        },
+        {
+          "id": "persona-ops-lead",
+          "type": "persona",
+          "position": { "x": 120, "y": 240 },
+          "stylePreset": "orange",
+          "data": {
+            "name": "Operations Lead",
+            "role": "VP Ops / COO",
+            "painPoints": "Drowning in spreadsheets and manual reporting. Needs real-time visibility across teams. Current tools are disconnected — Slack, Sheets, Notion, Jira don't talk to each other.",
+            "segment": ["SMB", "50-200 employees"],
+            "priority": "high"
+          }
+        },
+        {
+          "id": "persona-ic",
+          "type": "persona",
+          "position": { "x": 520, "y": 240 },
+          "stylePreset": "orange",
+          "data": {
+            "name": "Team Member",
+            "role": "Individual Contributor",
+            "painPoints": "Too many status update meetings. Wants a simple way to log progress without context-switching. Resistant to adopting yet another tool.",
+            "segment": ["IC", "Engineering", "Marketing"],
+            "priority": "medium"
+          }
+        },
+        {
+          "id": "feature-dashboard",
+          "type": "feature",
+          "position": { "x": 120, "y": 500 },
+          "stylePreset": "blue",
+          "data": {
+            "name": "Live Operations Dashboard",
+            "description": "Real-time cross-team dashboard that aggregates project status, blockers, and KPIs from connected tools into one view.",
+            "priority": "must",
+            "status": "planned",
+            "userStory": "As an Ops Lead, I want to see all team progress in one dashboard so I can skip the Monday status meeting."
+          }
+        },
+        {
+          "id": "feature-integrations",
+          "type": "feature",
+          "position": { "x": 520, "y": 500 },
+          "stylePreset": "blue",
+          "data": {
+            "name": "One-Click Integrations",
+            "description": "Pre-built connectors for Slack, Jira, Linear, Notion, and Google Sheets. Zero-config setup with OAuth.",
+            "priority": "must",
+            "status": "planned",
+            "userStory": "As a team member, I want my existing tools to sync automatically so I don't have to manually update another system."
+          }
+        },
+        {
+          "id": "feature-reports",
+          "type": "feature",
+          "position": { "x": 320, "y": 720 },
+          "stylePreset": "blue",
+          "data": {
+            "name": "Weekly Digest & Reports",
+            "description": "Auto-generated weekly summaries sent via email/Slack. Highlights blockers, completed milestones, and trending KPIs.",
+            "priority": "should",
+            "status": "planned",
+            "userStory": "As an Ops Lead, I want an automatic weekly report so I can share progress with leadership without manual work."
+          }
+        },
+        {
+          "id": "channel-content",
+          "type": "channel",
+          "position": { "x": 820, "y": 240 },
+          "stylePreset": "purple",
+          "data": {
+            "name": "Content & SEO",
+            "channelType": "social",
+            "direction": "inbound",
+            "metric": "Monthly organic signups",
+            "notes": "Blog posts targeting 'ops team visibility', 'replace status meetings', 'team dashboard for SMB'. SEO-optimized comparison pages vs spreadsheets."
+          }
+        },
+        {
+          "id": "channel-plg",
+          "type": "channel",
+          "position": { "x": 820, "y": 460 },
+          "stylePreset": "purple",
+          "data": {
+            "name": "Product-Led Growth",
+            "channelType": "embed",
+            "direction": "inbound",
+            "metric": "Free-to-paid conversion rate",
+            "notes": "Freemium tier with 3 integrations. Upgrade triggers: team size > 10, custom reports, API access. In-app upgrade prompts at value moments."
+          }
+        },
+        {
+          "id": "channel-partnerships",
+          "type": "channel",
+          "position": { "x": 820, "y": 680 },
+          "stylePreset": "purple",
+          "data": {
+            "name": "Integration Partnerships",
+            "channelType": "manual",
+            "direction": "both",
+            "metric": "Partner-referred signups",
+            "notes": "Co-marketing with Slack, Notion, Linear app directories. Joint webinars with complementary tools."
+          }
+        },
+        {
+          "id": "kpi-arr",
+          "type": "kpi",
+          "position": { "x": 120, "y": 950 },
+          "stylePreset": "red",
+          "data": {
+            "name": "Monthly Recurring Revenue",
+            "target": "$25K",
+            "unit": "MRR",
+            "measurement": "Stripe dashboard — sum of active subscriptions. Exclude free tier.",
+            "owner": "Revenue team"
+          }
+        },
+        {
+          "id": "kpi-activation",
+          "type": "kpi",
+          "position": { "x": 460, "y": 950 },
+          "stylePreset": "red",
+          "data": {
+            "name": "Activation Rate",
+            "target": "> 40%",
+            "unit": "%",
+            "measurement": "% of signups who connect at least 2 integrations within 7 days.",
+            "owner": "Product team"
+          }
+        },
+        {
+          "id": "kpi-nps",
+          "type": "kpi",
+          "position": { "x": 800, "y": 950 },
+          "stylePreset": "red",
+          "data": {
+            "name": "Net Promoter Score",
+            "target": "> 50",
+            "unit": "NPS",
+            "measurement": "In-app NPS survey triggered at Day 30. Quarterly email survey for all active users.",
+            "owner": "CX team"
+          }
+        },
+        {
+          "id": "risk-adoption",
+          "type": "risk",
+          "position": { "x": 120, "y": 1160 },
+          "stylePreset": "orange",
+          "data": {
+            "name": "Low Team Adoption",
+            "impact": "high",
+            "likelihood": "medium",
+            "mitigation": "Build Slack bot that enables updates without leaving Slack. Offer 1:1 onboarding for first 50 accounts. Create 'champion' program for ICs.",
+            "status": "open"
+          }
+        },
+        {
+          "id": "risk-competition",
+          "type": "risk",
+          "position": { "x": 520, "y": 1160 },
+          "stylePreset": "orange",
+          "data": {
+            "name": "Established Competitors",
+            "impact": "medium",
+            "likelihood": "high",
+            "mitigation": "Differentiate on simplicity and speed-to-value. Position as 'the dashboard you set up in 5 minutes, not 5 weeks'. Target the SMB gap that enterprise tools ignore.",
+            "status": "open"
+          }
+        },
+        {
+          "id": "bridge-dev",
+          "type": "bridge",
+          "position": { "x": 820, "y": 1160 },
+          "stylePreset": "teal",
+          "data": {
+            "name": "Handoff to Development",
+            "toFlow": "development",
+            "toPageId": "",
+            "toNodeId": "",
+            "syncFields": ["features", "integrations", "timeline"],
+            "notes": "Translate feature priorities and integration requirements into technical architecture and sprint planning."
+          }
+        }
+      ],
+      "edges": [
+        { "id": "e-ops-dashboard", "source": "persona-ops-lead", "target": "feature-dashboard", "type": "smoothstep", "label": "needs" },
+        { "id": "e-ic-integrations", "source": "persona-ic", "target": "feature-integrations", "type": "smoothstep", "label": "needs" },
+        { "id": "e-dashboard-reports", "source": "feature-dashboard", "target": "feature-reports", "type": "smoothstep", "label": "enables" },
+        { "id": "e-integrations-reports", "source": "feature-integrations", "target": "feature-reports", "type": "smoothstep", "label": "feeds" },
+        { "id": "e-content-ops", "source": "channel-content", "target": "persona-ops-lead", "type": "smoothstep", "label": "attracts" },
+        { "id": "e-plg-ic", "source": "channel-plg", "target": "persona-ic", "type": "smoothstep", "label": "activates" },
+        { "id": "e-dashboard-arr", "source": "feature-dashboard", "target": "kpi-arr", "type": "smoothstep", "label": "drives" },
+        { "id": "e-integrations-activation", "source": "feature-integrations", "target": "kpi-activation", "type": "smoothstep", "label": "measures" },
+        { "id": "e-reports-nps", "source": "feature-reports", "target": "kpi-nps", "type": "smoothstep", "label": "impacts" },
+        { "id": "e-partners-plg", "source": "channel-partnerships", "target": "channel-plg", "type": "smoothstep", "label": "amplifies" },
+        { "id": "e-features-dev", "source": "feature-dashboard", "target": "bridge-dev", "type": "smoothstep", "label": "handoff" }
+      ]
+    }
+  ]
+}

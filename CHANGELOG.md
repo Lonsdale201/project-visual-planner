@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.0.0 - 2026-02-20
+
+### New: Business Flow
+- Added 8 dedicated business node types: Persona, Feature, Data Entity, Channel, KPI, Risk, Bridge, and Spec.
+- Added 2 business flow blueprints: "SaaS Go-to-Market Plan" and "E-commerce Product Launch".
+- Blueprints are filtered by active flow mode — dev blueprints only show in development, business blueprints only in business.
+- Fixed blueprint instantiation so business blueprints correctly load into business flow.
+
+### New: Development Flow
+- Added Brand Icon node type for visual branding elements.
+
+### New: PDF Export
+- Full PDF generation for both development and business flows via jsPDF.
+- Business PDF includes: Personas, Feature Map (with priority/status badges), Data Model, Channels, KPIs, Risk Register (with impact/likelihood matrix), and Handoffs.
+- Development PDF includes: Services (with endpoint tables), Databases (with schema tables), Integrations, Infrastructure, Frameworks, Actions, and Milestones.
+- Cover page with project details and spec content inline.
+- Visual elements: tag chips, priority bars, risk matrices, big metric cards, quote blocks, note blocks, status/priority pill badges.
+- Settings toggle for including edge labels in PDF (default off).
+- Page-break prevention: nodes avoid splitting across pages.
+- Note: PDF generation for business flow is still being refined.
+
 ## 1.1 - 2026.02.16
 
 - Added single-node JSON schema editor in the inspector sidebar (copy/paste/apply per node).

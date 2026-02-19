@@ -108,6 +108,7 @@ function NodeInspector() {
   const [jsonDirty, setJsonDirty] = useState(false);
 
   const def = nodeTypeRegistry[node.type];
+  const nodeName = (node.data.name as string) || (node.data.title as string) || (node.data.brand as string) || def.label;
 
   const handleChange = (key: string, value: unknown) => {
     updateNodeData(node.id, { [key]: value });
@@ -268,13 +269,34 @@ function NodeInspector() {
 
   const outgoingEdges = page.edges.filter(e => e.source === node.id);
   const targetNameById = new Map(page.nodes.map(n => [n.id, (n.data.name as string) || (n.data.title as string) || 'Untitled']));
-
   return (
     <Box sx={{ p: 2 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-          {def.label}
-        </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1, mb: 1 }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
+            {def.label}
+          </Typography>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700, lineHeight: 1.2, mt: 0.2 }}>
+            {nodeName || 'Untitled'}
+          </Typography>
+          <Stack direction="row" spacing={0.6} sx={{ mt: 0.4, alignItems: 'center', minWidth: 0 }}>
+            <Typography
+              variant="caption"
+              sx={{
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                color: 'text.secondary',
+                userSelect: 'all',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                maxWidth: 180,
+              }}
+              title={node.id}
+            >
+              {node.id}
+            </Typography>
+          </Stack>
+        </Box>
         <Button size="small" color="error" onClick={() => removeNode(node.id)}>
           Delete
         </Button>

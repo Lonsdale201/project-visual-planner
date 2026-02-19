@@ -14,9 +14,15 @@ import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
+import PersonOutlinedIcon from '@mui/icons-material/PersonOutlined';
+import ExtensionOutlinedIcon from '@mui/icons-material/ExtensionOutlined';
+import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
+import CampaignOutlinedIcon from '@mui/icons-material/CampaignOutlined';
+import TrackChangesOutlinedIcon from '@mui/icons-material/TrackChangesOutlined';
+import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmber';
 import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import type { FlowDirection, NodeKind } from '../model/types';
+import type { FlowDirection, FlowMode, NodeKind } from '../model/types';
 import { nodeTypeRegistry } from '../model/registry';
 import { useProjectStore } from '../store/useProjectStore';
 import { blueprintPresets, instantiateBlueprintPages, instantiateBlueprintProject } from '../blueprints/presets';
@@ -33,10 +39,26 @@ const iconComponents: Record<string, React.ReactElement> = {
   ChatBubbleOutline: <ChatBubbleOutlineIcon />,
   DescriptionOutlined: <DescriptionOutlinedIcon />,
   FlagOutlined: <FlagOutlinedIcon />,
+  PersonOutlined: <PersonOutlinedIcon />,
+  ExtensionOutlined: <ExtensionOutlinedIcon />,
+  TableChartOutlined: <TableChartOutlinedIcon />,
+  CampaignOutlined: <CampaignOutlinedIcon />,
+  TrackChangesOutlined: <TrackChangesOutlinedIcon />,
+  WarningAmberOutlined: <WarningAmberOutlinedIcon />,
 };
 
-const coreKinds: NodeKind[] = ['service', 'router', 'action', 'database', 'infra', 'framework', 'integration', 'code'];
-const metaKinds: NodeKind[] = ['overview', 'comment', 'spec', 'milestone'];
+const developmentCoreKinds: NodeKind[] = ['service', 'bridge', 'router', 'action', 'database', 'infra', 'framework', 'integration', 'brand', 'code'];
+const developmentMetaKinds: NodeKind[] = ['overview', 'comment', 'spec', 'milestone'];
+const businessStrategyKinds: NodeKind[] = ['persona', 'feature', 'kpi'];
+const businessExecutionKinds: NodeKind[] = ['channel', 'dataEntity', 'brand', 'router'];
+const businessAlignmentKinds: NodeKind[] = ['risk', 'bridge', 'comment'];
+
+const businessPaletteLabelOverrides: Partial<Record<NodeKind, string>> = {
+  brand: 'Brand / Channel Icon',
+  router: 'Flow Split',
+  bridge: 'Project Handoff',
+  comment: 'Note',
+};
 
 interface NodePaletteProps {
   onOpenChangelog?: () => void;
@@ -53,6 +75,7 @@ export default function NodePalette({ onOpenChangelog, onOpenInfo }: NodePalette
   const setSelectedEdge = useProjectStore(s => s.setSelectedEdge);
   const loadProject = useProjectStore(s => s.loadProject);
   const setUI = useProjectStore(s => s.setUI);
+  const activeFlow = useProjectStore(s => (s.project.activeFlow === 'business' ? 'business' : 'development'));
 
   const [tab, setTab] = useState<'nodes' | 'blueprints'>('nodes');
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -95,7 +118,12 @@ export default function NodePalette({ onOpenChangelog, onOpenInfo }: NodePalette
     setFeedback(`Added blueprint canvases: ${pages.length} (${blueprintDirection === 'TOP_DOWN' ? 'Top down' : 'Left to right'})`);
   }, [addPage, setNodes, setEdges, setPageViewport, setSelectedNode, setSelectedEdge, blueprintDirection, setUI]);
 
-  const renderGroup = (label: string, kinds: NodeKind[]) => (
+  const getKindLabel = (kind: NodeKind, flow: FlowMode): string => {
+    if (flow === 'business') return businessPaletteLabelOverrides[kind] ?? nodeTypeRegistry[kind].label;
+    return nodeTypeRegistry[kind].label;
+  };
+
+  const renderGroup = (label: string, kinds: NodeKind[], flow: FlowMode) => (
     <Box key={label}>
       <Typography variant="overline" sx={{ px: 2, pt: 1.5, display: 'block', color: 'text.secondary' }}>
         {label}
@@ -115,7 +143,7 @@ export default function NodePalette({ onOpenChangelog, onOpenInfo }: NodePalette
                 {iconComponents[def.icon]}
               </ListItemIcon>
               <ListItemText
-                primary={def.label}
+                primary={getKindLabel(kind, flow)}
                 primaryTypographyProps={{ variant: 'body2' }}
               />
             </ListItemButton>
@@ -140,7 +168,7 @@ export default function NodePalette({ onOpenChangelog, onOpenInfo }: NodePalette
         </Select>
       </FormControl>
 
-      {blueprintPresets.map(preset => (
+      {blueprintPresets.filter(preset => preset.flow === activeFlow).map(preset => (
         <Box
           key={preset.id}
           sx={{
@@ -206,7 +234,7 @@ export default function NodePalette({ onOpenChangelog, onOpenInfo }: NodePalette
         </Box>
       ))}
     </Stack>
-  ), [appendBlueprintAsCanvases, applyBlueprintAsProject, blueprintDirection]);
+  ), [appendBlueprintAsCanvases, applyBlueprintAsProject, blueprintDirection, activeFlow]);
 
   return (
     <Box sx={{ width: '100%', pt: 1 }}>
@@ -257,9 +285,21 @@ export default function NodePalette({ onOpenChangelog, onOpenInfo }: NodePalette
 
       {tab === 'nodes' ? (
         <>
-          {renderGroup('Core', coreKinds)}
-          <Divider sx={{ my: 0.5 }} />
-          {renderGroup('Meta', metaKinds)}
+          {activeFlow === 'development' ? (
+            <>
+              {renderGroup('Core', developmentCoreKinds, activeFlow)}
+              <Divider sx={{ my: 0.5 }} />
+              {renderGroup('Meta', developmentMetaKinds, activeFlow)}
+            </>
+          ) : (
+            <>
+              {renderGroup('Strategy', businessStrategyKinds, activeFlow)}
+              <Divider sx={{ my: 0.5 }} />
+              {renderGroup('Execution', businessExecutionKinds, activeFlow)}
+              <Divider sx={{ my: 0.5 }} />
+              {renderGroup('Alignment', businessAlignmentKinds, activeFlow)}
+            </>
+          )}
         </>
       ) : blueprintsView}
     </Box>

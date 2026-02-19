@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   AppBar, Toolbar, Typography, Drawer, Box, IconButton,
-  Tooltip, Chip,
+  Tooltip, Chip, ToggleButton, ToggleButtonGroup,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -17,6 +17,7 @@ import SettingsDialog from './SettingsDialog';
 import MarkdownDocsDialog from './MarkdownDocsDialog';
 import { APP_VERSION } from './appMeta';
 import { useProjectStore } from '../store/useProjectStore';
+import type { FlowMode } from '../model/types';
 import changelogMarkdown from '../../CHANGELOG.md?raw';
 import infoMarkdown from '../../INFO.md?raw';
 
@@ -28,6 +29,8 @@ export default function AppShell() {
   const dirty = useProjectStore(s => s.dirty);
   const selectedNodeId = useProjectStore(s => s.selectedNodeId);
   const selectedEdgeId = useProjectStore(s => s.selectedEdgeId);
+  const activeFlow = useProjectStore(s => (s.project.activeFlow === 'business' ? 'business' : 'development'));
+  const setActiveFlow = useProjectStore(s => s.setActiveFlow);
   const saveToStorage = useProjectStore(s => s.saveToStorage);
   const resetProject = useProjectStore(s => s.resetProject);
 
@@ -81,6 +84,40 @@ export default function AppShell() {
             variant="outlined"
             sx={{ height: 22, fontSize: '0.7rem', color: 'white', borderColor: 'rgba(255,255,255,0.45)' }}
           />
+
+          <ToggleButtonGroup
+            exclusive
+            size="small"
+            value={activeFlow}
+            onChange={(_, next: FlowMode | null) => {
+              if (!next || next === activeFlow) return;
+              setActiveFlow(next);
+            }}
+            sx={{
+              ml: 1,
+              bgcolor: 'rgba(255,255,255,0.08)',
+              borderRadius: 1.2,
+              '& .MuiToggleButton-root': {
+                textTransform: 'none',
+                fontWeight: 700,
+                color: 'rgba(255,255,255,0.85)',
+                borderColor: 'rgba(255,255,255,0.24)',
+                px: 1.2,
+                py: 0.28,
+                fontSize: 12,
+              },
+              '& .MuiToggleButton-root.Mui-selected': {
+                bgcolor: 'rgba(255,255,255,0.18)',
+                color: '#fff',
+              },
+              '& .MuiToggleButton-root.Mui-selected:hover': {
+                bgcolor: 'rgba(255,255,255,0.24)',
+              },
+            }}
+          >
+            <ToggleButton value="development">Development</ToggleButton>
+            <ToggleButton value="business">Business Brief</ToggleButton>
+          </ToggleButtonGroup>
 
           <Box sx={{ mx: 1, flexGrow: 1, minWidth: 0, display: 'flex' }}>
             <PageTabs />

@@ -53,18 +53,28 @@ import { v4 as uuid } from 'uuid';
 
 const nodeTypes: NodeTypes = {
   service: FlowNode,
+  workstream: FlowNode,
+  bridge: FlowNode,
   router: FlowNode,
   stack: FlowNode,
   action: FlowNode,
   database: FlowNode,
   infra: FlowNode,
   framework: FlowNode,
+  capability: FlowNode,
   integration: FlowNode,
+  brand: FlowNode,
   code: FlowNode,
   overview: FlowNode,
   comment: FlowNode,
   spec: FlowNode,
   milestone: FlowNode,
+  persona: FlowNode,
+  feature: FlowNode,
+  dataEntity: FlowNode,
+  channel: FlowNode,
+  kpi: FlowNode,
+  risk: FlowNode,
 };
 
 const edgeTypes: EdgeTypes = {
@@ -138,6 +148,56 @@ function cloneData<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
+function normalizeHandleId(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const normalized = value.trim();
+  if (!normalized) return undefined;
+  const lower = normalized.toLowerCase();
+  if (lower === 'null' || lower === 'undefined') return undefined;
+  return normalized;
+}
+
+function toFiniteNumber(value: unknown, fallback: number): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+}
+
+function clampHandleCount(value: unknown, fallback: number): number {
+  const rounded = Math.round(toFiniteNumber(value, fallback));
+  if (!Number.isFinite(rounded)) return fallback;
+  return Math.max(0, Math.min(8, rounded));
+}
+
+function getSourceHandleCount(node: ProjectNode | undefined): number {
+  if (!node) return 0;
+  const def = nodeTypeRegistry[node.type];
+  return node.type === 'router'
+    ? clampHandleCount(node.data.outputCount, def.outputHandles)
+    : def.outputHandles;
+}
+
+function getTargetHandleCount(node: ProjectNode | undefined): number {
+  if (!node) return 0;
+  const def = nodeTypeRegistry[node.type];
+  return node.type === 'router'
+    ? clampHandleCount(node.data.inputCount, def.inputHandles)
+    : def.inputHandles;
+}
+
+function getDefaultSourceHandle(node: ProjectNode | undefined): string | undefined {
+  const count = getSourceHandleCount(node);
+  return count > 0 ? 'out-0' : undefined;
+}
+
+function getDefaultTargetHandle(node: ProjectNode | undefined): string | undefined {
+  const count = getTargetHandleCount(node);
+  return count > 0 ? 'in-0' : undefined;
+}
+
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   const tagName = target.tagName;
@@ -149,6 +209,7 @@ const COMMENT_ATTACH_RADIUS = 260;
 interface AttachNodeLike {
   id: string;
   type?: string;
+  data?: Record<string, unknown>;
   position: { x: number; y: number };
   width?: number;
   height?: number;
@@ -163,9 +224,20 @@ function isAttachableNodeType(type?: string): boolean {
   return ATTACHABLE_NODE_TYPES.has(type as NodeKind);
 }
 
+function isStickyCommentNode(type?: string, data?: Record<string, unknown>): boolean {
+  return type === 'comment' && Boolean(data?.sticky);
+}
+
+function isAttachableNode(node: { type?: string; data?: Record<string, unknown> }): boolean {
+  if (!isAttachableNodeType(node.type)) return false;
+  if (isStickyCommentNode(node.type, node.data)) return false;
+  return true;
+}
+
 function estimateNodeWidth(node: ProjectNode): number {
   if (node.type === 'overview') return 540;
   if (node.type === 'code') return 390;
+  if (node.type === 'brand') return 88;
   return 340;
 }
 
@@ -173,6 +245,7 @@ function estimateNodeHeight(node: ProjectNode): number {
   if (node.type === 'overview') return 520;
   if (node.type === 'milestone') return 170;
   if (node.type === 'integration') return 185;
+  if (node.type === 'brand') return 88;
   if (node.type === 'action') return 170;
 
   if (node.type === 'code') {
@@ -201,7 +274,7 @@ function estimateNodeHeight(node: ProjectNode): number {
 }
 
 function findAttachTargetId(draggedNode: AttachNodeLike, canvasNodes: AttachNodeLike[]): string | null {
-  if (!isAttachableNodeType(draggedNode.type)) return null;
+  if (!isAttachableNode(draggedNode)) return null;
 
   const centerOf = (node: AttachNodeLike) => ({
     x: node.position.x + ((node.width ?? 320) / 2),
@@ -235,6 +308,7 @@ function storeNodesToRF(nodes: ProjectNode[]): Node[] {
     id: n.id,
     type: n.type,
     position: { ...n.position },
+    draggable: !(n.type === 'comment' && Boolean(n.data?.sticky)),
     data: { ...n.data, nodeKind: n.type, stylePreset: n.stylePreset },
   }));
 }
@@ -249,26 +323,46 @@ function storeEdgesToRF(
 ): Edge[] {
   const nodeById = new Map(nodes.map(node => [node.id, node]));
 
-  return edges.map(e => ({
-    id: e.id,
-    source: e.source,
-    target: e.target,
-    sourceHandle: e.sourceHandle,
-    targetHandle: e.targetHandle,
-    type: 'project',
-    label: e.label,
-    data: {
-      edgeKind: e.type ?? globalEdgeType,
-      sourceTheme: getSourceThemeForNode(nodeById.get(e.source)),
-      hideLabel: hideEdgeLabels,
-      dimmed: Boolean(dimmedNodeIds && (dimmedNodeIds.has(e.source) || dimmedNodeIds.has(e.target))),
-    } satisfies ProjectEdgeData,
-    style: edgeDashed ? { strokeDasharray: '8 6' } : undefined,
-  }));
+  return edges.flatMap(e => {
+    const sourceNode = nodeById.get(e.source);
+    const targetNode = nodeById.get(e.target);
+    const sourceCount = getSourceHandleCount(sourceNode);
+    const targetCount = getTargetHandleCount(targetNode);
+    if (sourceCount <= 0 || targetCount <= 0) return [];
+
+    const sourceHandle = normalizeHandleId(e.sourceHandle) ?? getDefaultSourceHandle(sourceNode);
+    const targetHandle = normalizeHandleId(e.targetHandle) ?? getDefaultTargetHandle(targetNode);
+    if (!sourceHandle || !targetHandle) return [];
+
+    return [{
+      source: e.source,
+      target: e.target,
+      sourceHandle,
+      targetHandle,
+      id: e.id,
+      type: 'project',
+      label: e.label,
+      data: {
+        edgeKind: e.type ?? globalEdgeType,
+        sourceTheme: getSourceThemeForNode(sourceNode),
+        hideLabel: hideEdgeLabels,
+        dimmed: Boolean(dimmedNodeIds && (dimmedNodeIds.has(e.source) || dimmedNodeIds.has(e.target))),
+      } satisfies ProjectEdgeData,
+      style: edgeDashed ? { strokeDasharray: '8 6' } : undefined,
+    }];
+  });
 }
 
 interface FlowCanvasProps {
   showNodeNavigator?: boolean;
+}
+
+interface StickyDragState {
+  nodeId: string;
+  startClientX: number;
+  startClientY: number;
+  originX: number;
+  originY: number;
 }
 
 export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProps) {
@@ -280,6 +374,7 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
   const pendingAttachPreviewIdRef = useRef<string | null>(null);
   const canvasWrapperRef = useRef<HTMLDivElement | null>(null);
   const navDragRef = useRef<{ dragging: boolean; startX: number; startY: number; originX: number; originY: number } | null>(null);
+  const stickyDragRef = useRef<StickyDragState | null>(null);
 
   // Read from store
   const storeNodes = useProjectStore(s => selectActivePage(s).nodes);
@@ -300,6 +395,58 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
   const [expandedNavIds, setExpandedNavIds] = useState<Set<string>>(new Set());
   const [hiddenNodeIds, setHiddenNodeIds] = useState<Set<string>>(new Set());
   const [focusNodeId, setFocusNodeId] = useState<string | null>(null);
+  const [stickyDragPreviewById, setStickyDragPreviewById] = useState<Record<string, { x: number; y: number }>>({});
+
+  useEffect(() => {
+    const viewport = reactFlowRef.current?.getViewport() ?? pageViewport;
+    const zoom = viewport.zoom || 1;
+    const state = useProjectStore.getState();
+    const activePage = state.project.pages.find(p => p.id === state.activePageId);
+    if (!activePage) return;
+
+    let changed = false;
+    const nextNodes = activePage.nodes.map(node => {
+      if (node.type !== 'comment') return node;
+
+      const sticky = Boolean(node.data.sticky);
+      const pinned = Boolean(node.data.stickyPinned);
+
+      if (sticky && !pinned) {
+        changed = true;
+        return {
+          ...node,
+          position: {
+            x: node.position.x * zoom + viewport.x,
+            y: node.position.y * zoom + viewport.y,
+          },
+          data: {
+            ...node.data,
+            stickyPinned: true,
+          },
+        };
+      }
+
+      if (!sticky && pinned) {
+        changed = true;
+        const nextData = { ...node.data } as Record<string, unknown>;
+        delete nextData.stickyPinned;
+        return {
+          ...node,
+          position: {
+            x: (node.position.x - viewport.x) / zoom,
+            y: (node.position.y - viewport.y) / zoom,
+          },
+          data: nextData,
+        };
+      }
+
+      return node;
+    });
+
+    if (changed) {
+      state.replacePageGraph(state.activePageId, nextNodes, activePage.edges);
+    }
+  }, [storeNodes, pageViewport]);
 
   const {
     navigatorRoots,
@@ -313,14 +460,14 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
 
     const attachedCommentCounts = new Map<string, number>();
     storeNodes.forEach(node => {
-      if (!isAttachableNodeType(node.type)) return;
+      if (!isAttachableNode(node)) return;
       const attachedTo = typeof node.data.attachedTo === 'string' ? node.data.attachedTo : '';
       if (!attachedTo || !nodeById.has(attachedTo)) return;
       attachedCommentCounts.set(attachedTo, (attachedCommentCounts.get(attachedTo) ?? 0) + 1);
     });
 
     const treeCandidateNodes = storeNodes.filter(node => {
-      if (!isAttachableNodeType(node.type)) return true;
+      if (!isAttachableNode(node)) return true;
       const attachedTo = typeof node.data.attachedTo === 'string' ? node.data.attachedTo : '';
       return !attachedTo || !nodeById.has(attachedTo);
     });
@@ -362,7 +509,7 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
     const descendants = new Map<string, Set<string>>();
     const attachedCommentsByTarget = new Map<string, string[]>();
     storeNodes.forEach(node => {
-      if (!isAttachableNodeType(node.type)) return;
+      if (!isAttachableNode(node)) return;
       const attachedTo = typeof node.data.attachedTo === 'string' ? node.data.attachedTo : '';
       if (!attachedTo) return;
       const list = attachedCommentsByTarget.get(attachedTo) ?? [];
@@ -444,15 +591,16 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
     if (focusNodeId) setFocusNodeId(null);
   }, [showNodeNavigator, focusNodeId]);
 
-  const { displayNodes, displayEdges } = React.useMemo(() => {
+  const { displayNodes, displayEdges, stickyOverlayNodes } = React.useMemo(() => {
     const nodeById = new Map(storeNodes.map(node => [node.id, node]));
     const attachedByTarget = new Map<string, ProjectNode[]>();
     const renderedNodes: ProjectNode[] = [];
     const renderedIds = new Set<string>();
+    const stickyNodes: ProjectNode[] = [];
 
     storeNodes.forEach(node => {
       if (!visibleNodeIds.has(node.id)) return;
-      if (!isAttachableNodeType(node.type)) return;
+      if (!isAttachableNode(node)) return;
       const attachedTo = typeof node.data.attachedTo === 'string' ? node.data.attachedTo : '';
       if (!attachedTo || !nodeById.has(attachedTo) || !visibleNodeIds.has(attachedTo)) return;
       const list = attachedByTarget.get(attachedTo) ?? [];
@@ -461,7 +609,7 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
     });
 
     const hasValidAttachTarget = (node: ProjectNode): boolean => {
-      if (!isAttachableNodeType(node.type)) return false;
+      if (!isAttachableNode(node)) return false;
       const attachedTo = typeof node.data.attachedTo === 'string' ? node.data.attachedTo : '';
       if (!attachedTo || attachedTo === node.id) return false;
       return nodeById.has(attachedTo) && visibleNodeIds.has(attachedTo);
@@ -470,6 +618,11 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
     const renderNodeRecursive = (node: ProjectNode, positionOverride?: { x: number; y: number }) => {
       if (!visibleNodeIds.has(node.id)) return;
       if (renderedIds.has(node.id)) return;
+      if (node.type === 'comment' && Boolean(node.data.sticky) && Boolean(node.data.stickyPinned)) {
+        stickyNodes.push(node);
+        renderedIds.add(node.id);
+        return;
+      }
 
       const attachedChildren = attachedByTarget.get(node.id) ?? [];
       const attachedCount = attachedChildren.length;
@@ -533,7 +686,7 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
 
     const renderedEdges = storeEdges.filter(edge => renderedIds.has(edge.source) && renderedIds.has(edge.target));
 
-    return { displayNodes: renderedNodes, displayEdges: renderedEdges };
+    return { displayNodes: renderedNodes, displayEdges: renderedEdges, stickyOverlayNodes: stickyNodes };
   }, [storeNodes, storeEdges, flowDirection, attachPreviewTargetId, visibleNodeIds, dimmedNodeIds]);
 
   // Sync store -> local while preserving React Flow internals.
@@ -759,20 +912,53 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
   useEffect(() => {
     const onMouseMove = (event: MouseEvent) => {
       const drag = navDragRef.current;
-      if (!drag?.dragging) return;
+      if (drag?.dragging) {
+        event.preventDefault();
+        const nextX = drag.originX + (event.clientX - drag.startX);
+        const nextY = drag.originY + (event.clientY - drag.startY);
+        setNavigatorPos({
+          x: Math.max(8, nextX),
+          y: Math.max(8, nextY),
+        });
+        return;
+      }
+
+      const stickyDrag = stickyDragRef.current;
+      if (!stickyDrag) return;
       event.preventDefault();
-      const nextX = drag.originX + (event.clientX - drag.startX);
-      const nextY = drag.originY + (event.clientY - drag.startY);
-      setNavigatorPos({
-        x: Math.max(8, nextX),
-        y: Math.max(8, nextY),
-      });
+      const nextX = stickyDrag.originX + (event.clientX - stickyDrag.startClientX);
+      const nextY = stickyDrag.originY + (event.clientY - stickyDrag.startClientY);
+      setStickyDragPreviewById(prev => ({
+        ...prev,
+        [stickyDrag.nodeId]: { x: nextX, y: nextY },
+      }));
     };
 
     const onMouseUp = () => {
       if (navDragRef.current) {
         navDragRef.current.dragging = false;
       }
+
+      const stickyDrag = stickyDragRef.current;
+      if (!stickyDrag) return;
+      const preview = stickyDragPreviewById[stickyDrag.nodeId];
+      stickyDragRef.current = null;
+      if (!preview) return;
+
+      const state = useProjectStore.getState();
+      const activePage = state.project.pages.find(p => p.id === state.activePageId);
+      if (!activePage) return;
+      const nextNodes = activePage.nodes.map(node => (
+        node.id === stickyDrag.nodeId
+          ? { ...node, position: { x: preview.x, y: preview.y } }
+          : node
+      ));
+      state.replacePageGraph(state.activePageId, nextNodes, activePage.edges);
+      setStickyDragPreviewById(prev => {
+        const next = { ...prev };
+        delete next[stickyDrag.nodeId];
+        return next;
+      });
     };
 
     window.addEventListener('mousemove', onMouseMove);
@@ -781,7 +967,21 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
     };
-  }, []);
+  }, [stickyDragPreviewById]);
+
+  const startStickyDrag = useCallback((nodeId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    const node = stickyOverlayNodes.find(n => n.id === nodeId);
+    if (!node) return;
+    const preview = stickyDragPreviewById[nodeId];
+    stickyDragRef.current = {
+      nodeId,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      originX: preview?.x ?? node.position.x,
+      originY: preview?.y ?? node.position.y,
+    };
+  }, [stickyOverlayNodes, stickyDragPreviewById]);
 
   const startNavigatorDrag = useCallback((event: React.MouseEvent) => {
     navDragRef.current = {
@@ -829,7 +1029,7 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
   }, []);
 
   const onNodeDrag = useCallback((_: React.MouseEvent, draggedNode: Node) => {
-    const nextTargetId = isAttachableNodeType(draggedNode.type) ? findAttachTargetId(draggedNode, nodes) : null;
+    const nextTargetId = isAttachableNode(draggedNode as AttachNodeLike) ? findAttachTargetId(draggedNode as AttachNodeLike, nodes as AttachNodeLike[]) : null;
     pendingAttachPreviewIdRef.current = nextTargetId;
 
     if (attachPreviewFrameRef.current !== null) return;
@@ -842,24 +1042,28 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
 
   // Save dragged node positions to store after drag.
   const onNodeDragStop = useCallback((_: React.MouseEvent, draggedNode: Node, draggedNodes: Node[]) => {
-    if (!draggedNodes.length) return;
+    const dragBatch = Array.isArray(draggedNodes) && draggedNodes.length
+      ? draggedNodes
+      : [draggedNode];
+    if (!dragBatch.length) return;
 
     const state = useProjectStore.getState();
     const activePage = state.project.pages.find(p => p.id === state.activePageId);
     if (!activePage) return;
 
     const draggedPositionById = new Map(
-      draggedNodes.map(n => [n.id, { x: n.position.x, y: n.position.y }]),
+      dragBatch.map(n => [n.id, { x: n.position.x, y: n.position.y }]),
     );
 
-    const computedTargetId = isAttachableNodeType(draggedNode.type) ? findAttachTargetId(draggedNode, nodes) : null;
+    const isDraggedNodeAttachable = isAttachableNode(draggedNode as AttachNodeLike);
+    const computedTargetId = isDraggedNodeAttachable ? findAttachTargetId(draggedNode as AttachNodeLike, nodes as AttachNodeLike[]) : null;
     const targetId = computedTargetId ?? attachPreviewTargetId;
 
     const nextNodes = activePage.nodes.map(node => {
       const position = draggedPositionById.get(node.id);
       const baseNode = position ? { ...node, position } : node;
 
-      if (!isAttachableNodeType(draggedNode.type) || baseNode.id !== draggedNode.id) {
+      if (!isDraggedNodeAttachable || baseNode.id !== draggedNode.id) {
         return baseNode;
       }
 
@@ -884,11 +1088,21 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
     const id = uuid();
     const state = useProjectStore.getState();
     const activePage = state.project.pages.find(p => p.id === state.activePageId);
-    const sourceNode = activePage?.nodes.find(n => n.id === connection.source);
+    if (!activePage || !connection.source || !connection.target) return;
+
+    const sourceNode = activePage.nodes.find(n => n.id === connection.source);
+    const targetNode = activePage.nodes.find(n => n.id === connection.target);
+    const sourceHandle = normalizeHandleId(connection.sourceHandle) ?? getDefaultSourceHandle(sourceNode);
+    const targetHandle = normalizeHandleId(connection.targetHandle) ?? getDefaultTargetHandle(targetNode);
+    if (!sourceHandle || !targetHandle) return;
+
     const sourceTheme = getSourceThemeForNode(sourceNode);
 
     setEdges(eds => rfAddEdge({
-      ...connection,
+      source: connection.source,
+      target: connection.target,
+      sourceHandle,
+      targetHandle,
       id,
       type: 'project',
       data: {
@@ -903,8 +1117,8 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
       id,
       source: connection.source,
       target: connection.target,
-      sourceHandle: connection.sourceHandle ?? undefined,
-      targetHandle: connection.targetHandle ?? undefined,
+      sourceHandle,
+      targetHandle,
       type: edgeType as ProjectEdgeModel['type'],
     });
   }, [edgeType, edgeDashed, hideEdgeLabels, setEdges]);
@@ -1408,6 +1622,49 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
           </Box>
         </Paper>
       )}
+
+      {stickyOverlayNodes.map(node => {
+        const preview = stickyDragPreviewById[node.id];
+        const position = preview ?? node.position;
+        const title = typeof node.data.title === 'string' ? node.data.title : 'Note';
+        const body = typeof node.data.body === 'string' ? node.data.body : '';
+        const dimmed = dimmedNodeIds.has(node.id);
+        return (
+          <Paper
+            key={`sticky-${node.id}`}
+            elevation={3}
+            onMouseDown={(event) => startStickyDrag(node.id, event)}
+            onClick={(event) => {
+              event.stopPropagation();
+              useProjectStore.getState().setSelectedNode(node.id);
+            }}
+            sx={{
+              position: 'absolute',
+              left: position.x,
+              top: position.y,
+              width: 330,
+              borderRadius: 2,
+              border: '1px solid #e2e8f0',
+              bgcolor: '#fffdf5',
+              cursor: 'grab',
+              zIndex: 15,
+              opacity: dimmed ? 0.32 : 1,
+              '&:active': { cursor: 'grabbing' },
+            }}
+          >
+            <Box sx={{ px: 1.2, py: 0.9, borderBottom: '1px solid #edf2f7', bgcolor: '#fff9e8' }}>
+              <Typography sx={{ fontSize: 12.5, fontWeight: 700, color: '#1f2937' }}>
+                {title}
+              </Typography>
+            </Box>
+            <Box sx={{ px: 1.2, py: 1 }}>
+              <Typography sx={{ fontSize: 12, color: '#334155', whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>
+                {body || 'Empty note'}
+              </Typography>
+            </Box>
+          </Paper>
+        );
+      })}
 
       <Menu
         open={Boolean(nodeContextMenu)}

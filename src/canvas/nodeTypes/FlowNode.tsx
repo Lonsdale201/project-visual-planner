@@ -13,6 +13,12 @@ import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
+import PersonOutlinedIcon from '@mui/icons-material/PersonOutlined';
+import ExtensionOutlinedIcon from '@mui/icons-material/ExtensionOutlined';
+import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
+import CampaignOutlinedIcon from '@mui/icons-material/CampaignOutlined';
+import TrackChangesOutlinedIcon from '@mui/icons-material/TrackChangesOutlined';
+import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmber';
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 import TextFieldsOutlinedIcon from '@mui/icons-material/TextFieldsOutlined';
 import Prism from 'prismjs';
@@ -28,7 +34,7 @@ import 'prismjs/components/prism-markup';
 import 'prismjs/themes/prism.css';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import type { NodeKind, FlowDirection, Page } from '../../model/types';
+import type { NodeKind, FlowDirection, FlowMode, Page, Project } from '../../model/types';
 import { nodeTypeRegistry } from '../../model/registry';
 import { nodeColorMap } from '../../utils/nodeColors';
 import { parseDbSchema } from '../../utils/parseDbSchema';
@@ -56,6 +62,12 @@ const iconMap: Record<string, React.ReactElement> = {
   ChatBubbleOutline: <ChatBubbleOutlineIcon sx={{ fontSize: 14 }} />,
   DescriptionOutlined: <DescriptionOutlinedIcon sx={{ fontSize: 14 }} />,
   FlagOutlined: <FlagOutlinedIcon sx={{ fontSize: 14 }} />,
+  PersonOutlined: <PersonOutlinedIcon sx={{ fontSize: 14 }} />,
+  ExtensionOutlined: <ExtensionOutlinedIcon sx={{ fontSize: 14 }} />,
+  TableChartOutlined: <TableChartOutlinedIcon sx={{ fontSize: 14 }} />,
+  CampaignOutlined: <CampaignOutlinedIcon sx={{ fontSize: 14 }} />,
+  TrackChangesOutlined: <TrackChangesOutlinedIcon sx={{ fontSize: 14 }} />,
+  WarningAmberOutlined: <WarningAmberOutlinedIcon sx={{ fontSize: 14 }} />,
 };
 
 interface FlowNodeProps {
@@ -375,6 +387,10 @@ function getSummary(kind: NodeKind, data: Record<string, unknown>): string {
   switch (kind) {
     case 'service':
       return toStr(data.description);
+    case 'workstream':
+      return toStr(data.objective) || toStr(data.notes);
+    case 'bridge':
+      return toStr(data.notes);
     case 'router':
       return toStr(data.notes);
     case 'stack':
@@ -387,8 +403,12 @@ function getSummary(kind: NodeKind, data: Record<string, unknown>): string {
       return toStr(data.notes);
     case 'framework':
       return toStr(data.notes);
+    case 'capability':
+      return toStr(data.gap) || toStr(data.notes);
     case 'integration':
       return toStr(data.requestNotes) || toStr(data.responseNotes);
+    case 'brand':
+      return '';
     case 'code':
       return firstLine(toStr(data.content));
     case 'overview':
@@ -398,6 +418,18 @@ function getSummary(kind: NodeKind, data: Record<string, unknown>): string {
       return toStr(data.body);
     case 'milestone':
       return toStr(data.goal);
+    case 'persona':
+      return toStr(data.painPoints);
+    case 'feature':
+      return toStr(data.description);
+    case 'dataEntity':
+      return toStr(data.description);
+    case 'channel':
+      return toStr(data.notes);
+    case 'kpi':
+      return toStr(data.measurement);
+    case 'risk':
+      return toStr(data.mitigation);
   }
 }
 
@@ -405,6 +437,10 @@ function getMetaLabel(kind: NodeKind, data: Record<string, unknown>): string {
   switch (kind) {
     case 'service':
       return 'Service';
+    case 'workstream':
+      return toStr(data.owner) ? `Owner: ${toStr(data.owner)}` : 'Workstream';
+    case 'bridge':
+      return 'Bridge';
     case 'router':
       return toStr(data.tag) || 'Router';
     case 'stack':
@@ -415,8 +451,12 @@ function getMetaLabel(kind: NodeKind, data: Record<string, unknown>): string {
       return toStr(data.provider) || 'Infrastructure';
     case 'framework':
       return toStr(data.framework) || 'Framework';
+    case 'capability':
+      return toStr(data.maturity) ? `Maturity: ${toStr(data.maturity)}` : 'Capability';
     case 'integration':
       return toStr(data.boundary) === 'internal' ? 'Internal' : 'External';
+    case 'brand':
+      return '';
     case 'code':
       return parseCodeLanguage(data.language).toUpperCase();
     case 'overview':
@@ -429,6 +469,18 @@ function getMetaLabel(kind: NodeKind, data: Record<string, unknown>): string {
       return toStr(data.dueDate) ? `Due ${toStr(data.dueDate)}` : 'Milestone';
     case 'action':
       return '';
+    case 'persona':
+      return toStr(data.priority) ? `Priority: ${toStr(data.priority)}` : 'Persona';
+    case 'feature':
+      return toStr(data.status) || 'Feature';
+    case 'dataEntity':
+      return toStr(data.source) || 'Data Entity';
+    case 'channel':
+      return toStr(data.channelType) || 'Channel';
+    case 'kpi':
+      return toStr(data.unit) || 'KPI';
+    case 'risk':
+      return toStr(data.impact) ? `Impact: ${toStr(data.impact)}` : 'Risk';
   }
 }
 
@@ -449,7 +501,110 @@ function getDetailRows(kind: NodeKind, data: Record<string, unknown>): Array<{ l
     ];
   }
 
+  if (kind === 'bridge') {
+    const flow = toStr(data.toFlow) === 'business' ? 'business' : 'development';
+    const syncCount = toTags(data.syncFields).length;
+    return [
+      { label: 'Target flow', value: flow },
+      { label: 'Sync fields', value: String(syncCount) },
+    ];
+  }
+
+  if (kind === 'workstream') {
+    return [
+      { label: 'Owner', value: toStr(data.owner) || 'n/a' },
+      { label: 'Deliverables', value: String(toTags(data.deliverables).length) },
+    ];
+  }
+
+  if (kind === 'capability') {
+    return [
+      { label: 'Area', value: toStr(data.area) || 'n/a' },
+      { label: 'Maturity', value: toStr(data.maturity) || 'n/a' },
+    ];
+  }
+
+  if (kind === 'persona') {
+    return [
+      { label: 'Role', value: toStr(data.role) || 'n/a' },
+      { label: 'Priority', value: toStr(data.priority) || 'n/a' },
+    ];
+  }
+
+  if (kind === 'feature') {
+    return [
+      { label: 'Priority', value: toStr(data.priority) || 'n/a' },
+      { label: 'Status', value: toStr(data.status) || 'n/a' },
+    ];
+  }
+
+  if (kind === 'dataEntity') {
+    return [
+      { label: 'Source', value: toStr(data.source) || 'n/a' },
+      { label: 'Owner', value: toStr(data.owner) || 'n/a' },
+    ];
+  }
+
+  if (kind === 'channel') {
+    return [
+      { label: 'Type', value: toStr(data.channelType) || 'n/a' },
+      { label: 'Direction', value: toStr(data.direction) || 'n/a' },
+    ];
+  }
+
+  if (kind === 'kpi') {
+    return [
+      { label: 'Target', value: toStr(data.target) || 'TBD' },
+      { label: 'Owner', value: toStr(data.owner) || 'n/a' },
+    ];
+  }
+
+  if (kind === 'risk') {
+    return [
+      { label: 'Impact', value: toStr(data.impact) || 'n/a' },
+      { label: 'Likelihood', value: toStr(data.likelihood) || 'n/a' },
+    ];
+  }
+
   return [];
+}
+
+function getBridgeTargetStatus(project: Project, data: Record<string, unknown>): {
+  state: 'valid' | 'warning' | 'error';
+  message: string;
+} {
+  const targetFlow = (toStr(data.toFlow) === 'business' ? 'business' : 'development') as FlowMode;
+  const targetPageId = toStr(data.toPageId).trim();
+  const targetNodeId = toStr(data.toNodeId).trim();
+  const flowGraph = project.flows?.[targetFlow];
+
+  if (!flowGraph) {
+    return { state: 'error', message: `Target flow "${targetFlow}" is missing.` };
+  }
+
+  if (!targetPageId) {
+    return { state: 'warning', message: 'Set Target Page ID.' };
+  }
+
+  const targetPage = flowGraph.pages.find(page => page.id === targetPageId);
+  if (!targetPage) {
+    return { state: 'error', message: `Target page "${targetPageId}" not found in ${targetFlow}.` };
+  }
+
+  if (!targetNodeId) {
+    return { state: 'warning', message: `Set Target Node ID (page: ${targetPage.name}).` };
+  }
+
+  const targetNode = targetPage.nodes.find(node => node.id === targetNodeId);
+  if (!targetNode) {
+    return { state: 'error', message: `Target node "${targetNodeId}" not found in page "${targetPage.name}".` };
+  }
+
+  const targetName = toStr(targetNode.data.name) || toStr(targetNode.data.title) || targetNode.type;
+  return {
+    state: 'valid',
+    message: `Resolved: ${targetFlow} / ${targetPage.name} / ${targetName}`,
+  };
 }
 
 function getConnectedFlowNodeCount(page: Page, startNodeId: string): number {
@@ -512,6 +667,11 @@ function NodePresetIcon({ kind, data }: { kind: NodeKind; data: Record<string, u
     preset = findPresetByLabel(integrationPresets, presetLabel);
   }
 
+  if (kind === 'brand') {
+    presetLabel = toStr(data.brand);
+    preset = findPresetByLabel(integrationPresets, presetLabel);
+  }
+
   if (kind === 'framework') {
     presetLabel = toStr(data.framework);
     preset = findPresetByLabel(frameworkPresets, presetLabel);
@@ -539,27 +699,31 @@ function NodePresetIcon({ kind, data }: { kind: NodeKind; data: Record<string, u
 }
 
 export default function FlowNode({ id, data, selected }: FlowNodeProps) {
+  const project = useProjectStore(s => s.project);
   const direction = useProjectStore(s => s.project.ui.direction);
   const page = useProjectStore(s => selectActivePage(s));
-  const allPages = useProjectStore(s => s.project.pages);
+  const allPages = project.pages;
   const updateNodeData = useProjectStore(s => s.updateNodeData);
   const updateNodeInternals = useUpdateNodeInternals();
 
-  const kind = data.nodeKind as NodeKind;
-  if (!kind || !nodeTypeRegistry[kind]) {
-    return <div style={{ padding: 8, background: '#fee', border: '1px solid red' }}>Unknown: {String(kind)}</div>;
-  }
-
+  const rawKind = typeof data.nodeKind === 'string' ? data.nodeKind : '';
+  const isKnownKind = Object.prototype.hasOwnProperty.call(nodeTypeRegistry, rawKind);
+  const kind = (isKnownKind ? rawKind : 'comment') as NodeKind;
   const def = nodeTypeRegistry[kind];
   const preset = (data.stylePreset as string) || def.defaultStylePreset;
   const colors = nodeColorMap[preset as keyof typeof nodeColorMap] ?? nodeColorMap[def.defaultStylePreset];
   const handlePos = getHandlePositions(direction);
+  const isBusinessFlow = project.activeFlow === 'business';
+  const isOverviewDisabledInBusiness = isBusinessFlow && kind === 'overview';
 
   const title = toStr(data.name) || toStr(data.title) || 'Untitled node';
+  const brandName = kind === 'brand' ? toStr(data.brand) : '';
+  const brandPreset = kind === 'brand' ? findPresetByLabel(integrationPresets, brandName) : undefined;
   const summary = getSummary(kind, data);
   const serviceEndpoints = kind === 'service' ? parseServiceEndpoints(data.endpoints) : [];
   const detailRows = getDetailRows(kind, data);
   const metaLabel = getMetaLabel(kind, data);
+  const bridgeTargetStatus = kind === 'bridge' ? getBridgeTargetStatus(project, data) : null;
   const dbSchemaSource = kind === 'database' ? toStr(data.schemaNotes) : '';
   const hasDbSchemaInput = kind === 'database' && dbSchemaSource.trim().length > 0;
   const dbSchema = kind === 'database' ? parseDbSchema(dbSchemaSource) : [];
@@ -606,7 +770,9 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
   const milestonePriority = kind === 'milestone' ? toStr(data.priority).toLowerCase() : '';
   const milestoneFlowCount = kind === 'milestone' ? getConnectedFlowNodeCount(page, id) : 0;
   const milestoneDueDate = kind === 'milestone' ? toStr(data.dueDate) : '';
-  const milestoneLabel = kind === 'milestone' ? (toStr(data.milestoneLabel) || def.label) : def.label;
+  const isOverview = kind === 'overview';
+  const floatingTypeLabel = kind === 'milestone' ? (toStr(data.milestoneLabel) || def.label) : def.label;
+  const showFloatingTypeBadge = !isOverview && !(isBusinessFlow && kind === 'comment');
   const attachedCommentCount = Math.max(0, toNumber(data.attachedCommentCount, 0));
   const attachedCodeCount = Math.max(0, toNumber(data.attachedCodeCount, 0));
   const attachedCommentsExpanded = Boolean(data.attachedCommentsExpanded);
@@ -614,8 +780,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
   const hasAttachedCodeBadge = kind !== 'code' && attachedCodeCount > 0;
   const hasAttachedBadges = hasAttachedCommentBadge || hasAttachedCodeBadge;
   const isAttachCandidate = Boolean(data.__attachCandidate);
-  const overviewStats = kind === 'overview' ? collectOverviewStats(allPages) : null;
-  const isOverview = kind === 'overview';
+  const overviewStats = kind === 'overview' && !isOverviewDisabledInBusiness ? collectOverviewStats(allPages) : null;
   const overviewMilestonesExpanded = isOverview ? Boolean(data.overviewMilestonesExpanded) : false;
   const overviewStacksShowLabels = isOverview ? Boolean(data.overviewStacksShowLabels) : false;
   const overviewReleaseDate = isOverview ? toStr(data.releaseDate) : '';
@@ -636,6 +801,76 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
   useEffect(() => {
     updateNodeInternals(id);
   }, [id, direction, inputHandleCount, outputHandleCount, updateNodeInternals]);
+
+  if (!isKnownKind) {
+    return (
+      <Box
+        sx={{
+          minWidth: 240,
+          p: 1.1,
+          borderRadius: 2,
+          border: '1px solid #efb4b4',
+          bgcolor: '#fff4f4',
+          color: '#7c2d2d',
+          fontSize: 12.5,
+          fontWeight: 700,
+        }}
+      >
+        Unknown node type: {rawKind || '(missing)'}
+      </Box>
+    );
+  }
+
+  if (kind === 'brand') {
+    const fallbackPreset: PresetOption = brandPreset ?? {
+      value: '',
+      label: brandName || 'Brand',
+      abbr: (brandName || 'BR').slice(0, 2).toUpperCase(),
+      color: '#64748b',
+      bg: '#eef2f7',
+    };
+
+    return (
+      <>
+        <Box
+          sx={{
+            position: 'relative',
+            width: 88,
+            height: 88,
+            borderRadius: 3,
+            bgcolor: '#fff',
+            border: `1.5px solid ${selected ? colors.border : alpha(colors.border, 0.45)}`,
+            boxShadow: selected
+              ? `0 10px 24px ${alpha(colors.border, 0.22)}`
+              : '0 2px 10px rgba(17, 24, 39, 0.08)',
+            display: 'grid',
+            placeItems: 'center',
+            overflow: 'visible',
+            opacity: isDimmed ? 0.28 : 1,
+          }}
+          title={fallbackPreset.label}
+        >
+          <IntegrationPresetIcon preset={fallbackPreset} size={52} plain />
+        </Box>
+
+        <Handle
+          className="kf-handle kf-handle-target"
+          type="target"
+          position={handlePos.input}
+          id="in-0"
+          style={getDistributedHandleStyle(handlePos.input, 0, 1, colors.border)}
+        />
+        <Handle
+          className="kf-handle kf-handle-source"
+          type="source"
+          position={handlePos.output}
+          id="out-0"
+          style={getDistributedHandleStyle(handlePos.output, 0, 1, colors.border)}
+        />
+      </>
+    );
+  }
+
   const hideMetaChip =
     kind === 'comment'
     || kind === 'action'
@@ -750,7 +985,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
           opacity: isDimmed ? 0.28 : 1,
         }}
       >
-        {!isOverview && (
+        {showFloatingTypeBadge && (
           <Box
             sx={{
               position: 'absolute',
@@ -771,7 +1006,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
             }}
           >
             {iconMap[def.icon]}
-            {milestoneLabel}
+            {floatingTypeLabel}
           </Box>
         )}
 
@@ -1215,7 +1450,13 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                     </IconButton>
                   </Tooltip>
                 </Stack>
-                <Stack direction="row" spacing={0.8} sx={{ flexWrap: 'wrap', gap: 0.8 }}>
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(7, 1fr)',
+                    gap: 0.7,
+                  }}
+                >
                     {(overviewStacks.length ? overviewStacks : ['No stacks yet']).map((stackName, index) => {
                     const stackPreset =
                       findPresetByLabel(stackPresets, stackName)
@@ -1231,11 +1472,11 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
 
                     return (
                       <Tooltip key={`${stackName}-${index}`} title={stackName} arrow placement="top">
-                        <Box sx={{ width: 74, minHeight: 44, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.45 }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.4 }}>
                           <Box
                             sx={{
-                              width: 44,
-                              height: 44,
+                              width: 40,
+                              height: 40,
                               borderRadius: 1.6,
                               border: '1px solid #dce4f0',
                               bgcolor: '#fff',
@@ -1244,22 +1485,21 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                               boxShadow: '0 1px 4px rgba(15, 23, 42, 0.06)',
                             }}
                           >
-                            <TechStackPresetIcon preset={stackPreset} size={24} plain />
+                            <TechStackPresetIcon preset={stackPreset} size={22} plain />
                           </Box>
                           {overviewStacksShowLabels && (
                             <Typography
                               sx={{
                                 width: '100%',
-                                fontSize: 10.5,
+                                fontSize: 10,
                                 color: '#6d7b8f',
                                 textAlign: 'center',
-                                lineHeight: 1.2,
+                                lineHeight: 1.15,
                                 wordBreak: 'break-word',
                                 display: '-webkit-box',
                                 WebkitLineClamp: 2,
                                 WebkitBoxOrient: 'vertical',
                                 overflow: 'hidden',
-                                minHeight: 24,
                               }}
                             >
                               {stackName}
@@ -1269,7 +1509,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                       </Tooltip>
                     );
                   })}
-                </Stack>
+                </Box>
               </Box>
 
               <Box>
@@ -1406,6 +1646,10 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                 )}
               </Box>
             </>
+          ) : isOverviewDisabledInBusiness ? (
+            <Typography sx={{ fontSize: 12.8, color: '#8b97a9', lineHeight: 1.45 }}>
+              Project Overview is temporarily disabled in Business flow.
+            </Typography>
           ) : kind === 'code' ? (
             <>
                 {hasSummary && (
@@ -1665,8 +1909,380 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                 </Stack>
               )}
             </>
+          ) : kind === 'bridge' ? (
+            <>
+              {hasSummary && (
+                <MarkdownText text={summary} mb={0.75} />
+              )}
+              <Box
+                sx={{
+                  borderRadius: 1.9,
+                  border: '1px solid',
+                  borderColor: bridgeTargetStatus?.state === 'valid'
+                    ? '#b7e5cf'
+                    : bridgeTargetStatus?.state === 'warning'
+                      ? '#f2de9f'
+                      : '#f3c3c3',
+                  bgcolor: bridgeTargetStatus?.state === 'valid'
+                    ? '#eefaf4'
+                    : bridgeTargetStatus?.state === 'warning'
+                      ? '#fff8e7'
+                      : '#fef1f1',
+                  px: 1,
+                  py: 0.7,
+                  mb: 0.8,
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: 11.6,
+                    fontWeight: 700,
+                    color: bridgeTargetStatus?.state === 'valid'
+                      ? '#176647'
+                      : bridgeTargetStatus?.state === 'warning'
+                        ? '#855b00'
+                        : '#8f2a2a',
+                    lineHeight: 1.35,
+                  }}
+                >
+                  {bridgeTargetStatus?.message ?? 'Bridge target not configured.'}
+                </Typography>
+              </Box>
+              <Stack direction="row" spacing={0.58} sx={{ flexWrap: 'wrap', gap: 0.55 }}>
+                {toStr(data.toPageId) && (
+                  <Chip
+                    label={`Page: ${compact(toStr(data.toPageId), 20)}`}
+                    size="small"
+                    sx={{
+                      height: 22,
+                      borderRadius: 1.7,
+                      bgcolor: '#f8fafc',
+                      border: '1px solid #e7edf3',
+                      color: '#4f5f72',
+                      '& .MuiChip-label': { fontSize: 11, fontWeight: 600, px: 1 },
+                    }}
+                  />
+                )}
+                {toStr(data.toNodeId) && (
+                  <Chip
+                    label={`Node: ${compact(toStr(data.toNodeId), 20)}`}
+                    size="small"
+                    sx={{
+                      height: 22,
+                      borderRadius: 1.7,
+                      bgcolor: '#f8fafc',
+                      border: '1px solid #e7edf3',
+                      color: '#4f5f72',
+                      '& .MuiChip-label': { fontSize: 11, fontWeight: 600, px: 1 },
+                    }}
+                  />
+                )}
+              </Stack>
+            </>
           ) : kind === 'comment' || kind === 'spec' ? (
             hasSummary ? <MarkdownText text={summary} mb={detailRows.length ? 0.85 : 0} /> : null
+          ) : kind === 'persona' ? (
+            <>
+              {/* Role badge */}
+              {toStr(data.role) && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.7, mb: 0.9 }}>
+                  <PersonOutlinedIcon sx={{ fontSize: 18, color: colors.text }} />
+                  <Typography sx={{ fontSize: 13.5, fontWeight: 700, color: '#2d3a4f' }}>
+                    {toStr(data.role)}
+                  </Typography>
+                </Box>
+              )}
+              {/* Pain points */}
+              {toStr(data.painPoints) && (
+                <Box
+                  sx={{
+                    borderRadius: 1.8,
+                    border: '1px solid #fde0b7',
+                    bgcolor: '#fffbf3',
+                    px: 1.1,
+                    py: 0.8,
+                    mb: 0.9,
+                  }}
+                >
+                  <Typography sx={{ fontSize: 10, fontWeight: 700, color: '#b45309', letterSpacing: 0.4, mb: 0.3 }}>
+                    PAIN POINTS
+                  </Typography>
+                  <Typography sx={{ fontSize: 12.5, color: '#6b4c1a', lineHeight: 1.35 }}>
+                    {compact(toStr(data.painPoints), 120)}
+                  </Typography>
+                </Box>
+              )}
+              {/* Segment tags */}
+              {toTags(data.segment).length > 0 && (
+                <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5, mb: 0.5 }}>
+                  {toTags(data.segment).map(tag => (
+                    <Chip
+                      key={tag}
+                      label={tag}
+                      size="small"
+                      sx={{
+                        height: 22,
+                        borderRadius: 999,
+                        bgcolor: colors.header,
+                        border: `1px solid ${alpha(colors.border, 0.35)}`,
+                        color: colors.text,
+                        '& .MuiChip-label': { px: 0.9, fontSize: 10.5, fontWeight: 700 },
+                      }}
+                    />
+                  ))}
+                </Stack>
+              )}
+              {/* Priority bar */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, mt: 0.3 }}>
+                <Typography sx={{ fontSize: 10, fontWeight: 700, color: '#8995a8', letterSpacing: 0.3 }}>PRIORITY</Typography>
+                <Box sx={{ flex: 1, height: 6, borderRadius: 3, bgcolor: '#eef1f5', overflow: 'hidden' }}>
+                  <Box sx={{
+                    height: '100%',
+                    borderRadius: 3,
+                    width: toStr(data.priority) === 'high' ? '100%' : toStr(data.priority) === 'medium' ? '60%' : '30%',
+                    bgcolor: toStr(data.priority) === 'high' ? '#ef4444' : toStr(data.priority) === 'medium' ? '#f59e0b' : '#94a3b8',
+                  }} />
+                </Box>
+              </Box>
+            </>
+          ) : kind === 'feature' ? (
+            <>
+              {/* Priority + Status badges */}
+              <Stack direction="row" spacing={0.6} sx={{ mb: 0.9 }}>
+                <Chip
+                  label={toStr(data.priority).toUpperCase() || 'MUST'}
+                  size="small"
+                  sx={{
+                    height: 24,
+                    borderRadius: 999,
+                    bgcolor: toStr(data.priority) === 'must' ? '#fef2f2' : toStr(data.priority) === 'should' ? '#fff7ed' : toStr(data.priority) === 'could' ? '#eff6ff' : '#f8fafc',
+                    border: `1px solid ${toStr(data.priority) === 'must' ? '#fecaca' : toStr(data.priority) === 'should' ? '#fed7aa' : toStr(data.priority) === 'could' ? '#bfdbfe' : '#e2e8f0'}`,
+                    color: toStr(data.priority) === 'must' ? '#b91c1c' : toStr(data.priority) === 'should' ? '#c2410c' : toStr(data.priority) === 'could' ? '#1d4ed8' : '#64748b',
+                    '& .MuiChip-label': { px: 0.9, fontSize: 10.5, fontWeight: 800, letterSpacing: 0.3 },
+                  }}
+                />
+                <Chip
+                  label={toStr(data.status) || 'planned'}
+                  size="small"
+                  sx={{
+                    height: 24,
+                    borderRadius: 999,
+                    bgcolor: toStr(data.status) === 'done' ? '#ecfdf5' : toStr(data.status) === 'in-progress' ? '#eff6ff' : '#f8fafc',
+                    border: `1px solid ${toStr(data.status) === 'done' ? '#a7f3d0' : toStr(data.status) === 'in-progress' ? '#bfdbfe' : '#e2e8f0'}`,
+                    color: toStr(data.status) === 'done' ? '#065f46' : toStr(data.status) === 'in-progress' ? '#1e40af' : '#64748b',
+                    '& .MuiChip-label': { px: 0.9, fontSize: 10.5, fontWeight: 700 },
+                  }}
+                />
+              </Stack>
+              {/* Description */}
+              {hasSummary && <MarkdownText text={summary} mb={0.7} />}
+              {/* User story in italic quote block */}
+              {toStr(data.userStory) && (
+                <Box
+                  sx={{
+                    borderLeft: `3px solid ${alpha(colors.border, 0.5)}`,
+                    pl: 1.1,
+                    py: 0.4,
+                  }}
+                >
+                  <Typography sx={{ fontSize: 12, color: '#6b7280', fontStyle: 'italic', lineHeight: 1.4 }}>
+                    {compact(toStr(data.userStory), 140)}
+                  </Typography>
+                </Box>
+              )}
+            </>
+          ) : kind === 'dataEntity' ? (
+            <>
+              {hasSummary && <MarkdownText text={summary} mb={0.7} />}
+              {/* Attributes as mini schema table */}
+              {toTags(data.attributes).length > 0 && (
+                <Box
+                  sx={{
+                    borderRadius: 1.8,
+                    border: '1px solid #d1e0d5',
+                    bgcolor: '#f8fcf9',
+                    overflow: 'hidden',
+                    mb: 0.85,
+                  }}
+                >
+                  <Box sx={{ px: 1.1, py: 0.55, bgcolor: '#eef5f0', borderBottom: '1px solid #d1e0d5' }}>
+                    <Typography sx={{ fontSize: 10.5, fontWeight: 700, color: '#3d6b4e', letterSpacing: 0.4 }}>
+                      ATTRIBUTES
+                    </Typography>
+                  </Box>
+                  {toTags(data.attributes).slice(0, 6).map(attr => (
+                    <Box
+                      key={attr}
+                      sx={{
+                        px: 1.1,
+                        py: 0.45,
+                        borderBottom: '1px solid #e8f0ea',
+                        '&:last-of-type': { borderBottom: 'none' },
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 0.6,
+                      }}
+                    >
+                      <Box sx={{ width: 5, height: 5, borderRadius: '50%', bgcolor: '#6dba82', flexShrink: 0 }} />
+                      <Typography sx={{ fontSize: 12.5, color: '#2d4a36', fontWeight: 600 }}>
+                        {attr}
+                      </Typography>
+                    </Box>
+                  ))}
+                  {toTags(data.attributes).length > 6 && (
+                    <Typography sx={{ px: 1.1, py: 0.4, fontSize: 11, color: '#6b8f74' }}>
+                      +{toTags(data.attributes).length - 6} more
+                    </Typography>
+                  )}
+                </Box>
+              )}
+              {/* Source & Owner */}
+              <Stack direction="row" spacing={0.6} sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+                {toStr(data.source) && (
+                  <Chip
+                    label={`Source: ${compact(toStr(data.source), 20)}`}
+                    size="small"
+                    sx={{ height: 22, borderRadius: 1.7, bgcolor: '#f0faf3', border: '1px solid #d1e0d5', color: '#3d6b4e', '& .MuiChip-label': { fontSize: 11, fontWeight: 600, px: 1 } }}
+                  />
+                )}
+                {toStr(data.owner) && (
+                  <Chip
+                    label={`Owner: ${compact(toStr(data.owner), 20)}`}
+                    size="small"
+                    sx={{ height: 22, borderRadius: 1.7, bgcolor: '#f8fafc', border: '1px solid #e7edf3', color: '#4f5f72', '& .MuiChip-label': { fontSize: 11, fontWeight: 600, px: 1 } }}
+                  />
+                )}
+              </Stack>
+            </>
+          ) : kind === 'channel' ? (
+            <>
+              {/* Direction indicator with arrow */}
+              <Stack direction="row" spacing={0.8} sx={{ alignItems: 'center', mb: 0.9 }}>
+                <Box sx={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 32, height: 32, borderRadius: 1.5,
+                  bgcolor: '#f3e8ff', border: '1px solid #ddd6fe',
+                }}>
+                  <Typography sx={{ fontSize: 16, fontWeight: 800, color: '#7c3aed' }}>
+                    {toStr(data.direction) === 'inbound' ? '↓' : toStr(data.direction) === 'outbound' ? '↑' : '↕'}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography sx={{ fontSize: 10, fontWeight: 700, color: '#8b5cf6', letterSpacing: 0.4 }}>
+                    {(toStr(data.direction) || 'inbound').toUpperCase()}
+                  </Typography>
+                  <Typography sx={{ fontSize: 13, fontWeight: 700, color: '#4c1d95' }}>
+                    {toStr(data.channelType) || 'sync'}
+                  </Typography>
+                </Box>
+              </Stack>
+              {/* Notes */}
+              {hasSummary && <MarkdownText text={summary} mb={0.7} />}
+              {/* Metric */}
+              {toStr(data.metric) && (
+                <Box sx={{
+                  borderRadius: 1.8, border: '1px solid #e9d5ff', bgcolor: '#faf5ff',
+                  px: 1.1, py: 0.65, display: 'flex', alignItems: 'center', gap: 0.6,
+                }}>
+                  <TrackChangesOutlinedIcon sx={{ fontSize: 14, color: '#8b5cf6' }} />
+                  <Typography sx={{ fontSize: 12, color: '#6b21a8', fontWeight: 600 }}>
+                    {compact(toStr(data.metric), 40)}
+                  </Typography>
+                </Box>
+              )}
+            </>
+          ) : kind === 'kpi' ? (
+            <>
+              {/* Big target value */}
+              <Box sx={{
+                borderRadius: 2, border: '1px solid #fecaca', bgcolor: '#fef2f2',
+                px: 1.2, py: 1, mb: 0.9, textAlign: 'center',
+              }}>
+                <Typography sx={{ fontSize: 10, fontWeight: 700, color: '#ef4444', letterSpacing: 0.5, mb: 0.3 }}>
+                  TARGET
+                </Typography>
+                <Typography sx={{ fontSize: 22, fontWeight: 800, color: '#991b1b', lineHeight: 1.1 }}>
+                  {toStr(data.target) || 'TBD'}
+                </Typography>
+                {toStr(data.unit) && (
+                  <Typography sx={{ fontSize: 11.5, color: '#b91c1c', fontWeight: 600, mt: 0.2 }}>
+                    {toStr(data.unit)}
+                  </Typography>
+                )}
+              </Box>
+              {/* Measurement method */}
+              {toStr(data.measurement) && (
+                <Box sx={{ mb: 0.6 }}>
+                  <Typography sx={{ fontSize: 10, fontWeight: 700, color: '#8995a8', letterSpacing: 0.4, mb: 0.3 }}>
+                    MEASUREMENT
+                  </Typography>
+                  <Typography sx={{ fontSize: 12.5, color: '#4b5563', lineHeight: 1.35 }}>
+                    {compact(toStr(data.measurement), 100)}
+                  </Typography>
+                </Box>
+              )}
+              {/* Owner */}
+              {toStr(data.owner) && (
+                <Chip
+                  label={`Owner: ${compact(toStr(data.owner), 25)}`}
+                  size="small"
+                  sx={{ height: 22, borderRadius: 1.7, bgcolor: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', '& .MuiChip-label': { fontSize: 11, fontWeight: 600, px: 1 } }}
+                />
+              )}
+            </>
+          ) : kind === 'risk' ? (
+            <>
+              {/* Risk severity matrix badge */}
+              <Stack direction="row" spacing={0.6} sx={{ mb: 0.9 }}>
+                <Box sx={{
+                  flex: 1, borderRadius: 1.8, px: 1, py: 0.65, textAlign: 'center',
+                  bgcolor: (priorityTone[toStr(data.impact)] ?? priorityTone.medium).bg,
+                  border: `1px solid ${(priorityTone[toStr(data.impact)] ?? priorityTone.medium).border}`,
+                }}>
+                  <Typography sx={{ fontSize: 9.5, fontWeight: 700, color: '#8995a8', letterSpacing: 0.4 }}>IMPACT</Typography>
+                  <Typography sx={{ fontSize: 13, fontWeight: 800, color: (priorityTone[toStr(data.impact)] ?? priorityTone.medium).color }}>
+                    {(toStr(data.impact) || 'medium').toUpperCase()}
+                  </Typography>
+                </Box>
+                <Box sx={{
+                  flex: 1, borderRadius: 1.8, px: 1, py: 0.65, textAlign: 'center',
+                  bgcolor: (priorityTone[toStr(data.likelihood)] ?? priorityTone.medium).bg,
+                  border: `1px solid ${(priorityTone[toStr(data.likelihood)] ?? priorityTone.medium).border}`,
+                }}>
+                  <Typography sx={{ fontSize: 9.5, fontWeight: 700, color: '#8995a8', letterSpacing: 0.4 }}>LIKELIHOOD</Typography>
+                  <Typography sx={{ fontSize: 13, fontWeight: 800, color: (priorityTone[toStr(data.likelihood)] ?? priorityTone.medium).color }}>
+                    {(toStr(data.likelihood) || 'medium').toUpperCase()}
+                  </Typography>
+                </Box>
+              </Stack>
+              {/* Mitigation */}
+              {toStr(data.mitigation) && (
+                <Box sx={{
+                  borderRadius: 1.8, border: '1px solid #fde0b7', bgcolor: '#fffbf3',
+                  px: 1.1, py: 0.7, mb: 0.7,
+                }}>
+                  <Typography sx={{ fontSize: 10, fontWeight: 700, color: '#b45309', letterSpacing: 0.4, mb: 0.25 }}>
+                    MITIGATION
+                  </Typography>
+                  <Typography sx={{ fontSize: 12.5, color: '#6b4c1a', lineHeight: 1.35 }}>
+                    {compact(toStr(data.mitigation), 120)}
+                  </Typography>
+                </Box>
+              )}
+              {/* Status pill */}
+              <Chip
+                label={(toStr(data.status) || 'open').toUpperCase()}
+                size="small"
+                sx={{
+                  height: 24,
+                  borderRadius: 999,
+                  bgcolor: toStr(data.status) === 'mitigated' ? '#ecfdf5' : toStr(data.status) === 'accepted' ? '#f8fafc' : '#fef2f2',
+                  border: `1px solid ${toStr(data.status) === 'mitigated' ? '#a7f3d0' : toStr(data.status) === 'accepted' ? '#e2e8f0' : '#fecaca'}`,
+                  color: toStr(data.status) === 'mitigated' ? '#065f46' : toStr(data.status) === 'accepted' ? '#64748b' : '#b91c1c',
+                  '& .MuiChip-label': { px: 1, fontSize: 10.5, fontWeight: 800, letterSpacing: 0.3 },
+                }}
+              />
+            </>
           ) : (
             hasSummary ? <MarkdownText text={summary} mb={detailRows.length || kind === 'milestone' ? 0.85 : 0} /> : null
           )}
@@ -1703,7 +2319,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
             </Stack>
           )}
 
-          {detailRows.length > 0 && (
+          {detailRows.length > 0 && kind !== 'persona' && kind !== 'feature' && kind !== 'dataEntity' && kind !== 'channel' && kind !== 'kpi' && kind !== 'risk' && (
             <Stack direction="row" spacing={0.65} sx={{ flexWrap: 'wrap', gap: 0.6 }}>
               {detailRows.map(row => (
                 <Chip
@@ -1752,6 +2368,3 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
     </>
   );
 }
-
-
-
