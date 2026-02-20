@@ -9,8 +9,10 @@ import { useProjectStore } from '../store/useProjectStore';
 import { exportProjectToFile } from '../io/exportProject';
 import { exportProjectToPdf } from '../io/exportPdf';
 import { importProjectFromFile } from '../io/importProject';
+import { useT } from '../i18n';
 
 export default function ImportExportButtons() {
+  const t = useT();
   const getExportData = useProjectStore(s => s.getExportData);
   const loadProject = useProjectStore(s => s.loadProject);
   const saveToStorage = useProjectStore(s => s.saveToStorage);
@@ -20,13 +22,13 @@ export default function ImportExportButtons() {
   const handleExport = () => {
     const data = getExportData();
     exportProjectToFile(data);
-    setSnack({ message: 'Project exported!', severity: 'success' });
+    setSnack({ message: t('importExport.projectExported'), severity: 'success' });
   };
 
   const handleExportPdf = () => {
     const data = getExportData();
-    exportProjectToPdf(data);
-    setSnack({ message: 'PDF exported!', severity: 'success' });
+    exportProjectToPdf(data, t);
+    setSnack({ message: t('importExport.pdfExported'), severity: 'success' });
   };
 
   const handleImport = async () => {
@@ -34,25 +36,28 @@ export default function ImportExportButtons() {
     if (project) {
       loadProject(project);
       saveToStorage();
-      setSnack({ message: 'Project imported successfully!', severity: 'success' });
+      setSnack({ message: t('importExport.importSuccess'), severity: 'success' });
     } else if (validation.errors.length > 0 && validation.errors[0] !== 'Import cancelled') {
-      setSnack({ message: `Import failed: ${validation.errors.join('; ')}`, severity: 'error' });
+      setSnack({
+        message: t('importExport.importFailed', { errors: validation.errors.join('; ') }),
+        severity: 'error',
+      });
     }
   };
 
   return (
     <>
-      <Tooltip title="Import Project">
+      <Tooltip title={t('importExport.importProject')}>
         <IconButton color="inherit" onClick={handleImport}>
           <FileUploadOutlinedIcon />
         </IconButton>
       </Tooltip>
-      <Tooltip title="Export JSON">
+      <Tooltip title={t('importExport.exportJson')}>
         <IconButton color="inherit" onClick={handleExport}>
           <FileDownloadOutlinedIcon />
         </IconButton>
       </Tooltip>
-      <Tooltip title="Export PDF">
+      <Tooltip title={t('importExport.exportPdf')}>
         <IconButton color="inherit" onClick={handleExportPdf}>
           <PictureAsPdfOutlinedIcon />
         </IconButton>

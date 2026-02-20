@@ -6,6 +6,34 @@ import { useProjectStore } from '../store/useProjectStore';
 import { nodeTypeRegistry } from '../model/registry';
 import SchemaForm from './forms/SchemaForm';
 import type { NodeKind, NodeStylePreset, Page } from '../model/types';
+import { useT } from '../i18n';
+import type { TranslationKey } from '../i18n';
+
+const nodeTranslationKeyByKind: Record<NodeKind, TranslationKey> = {
+  service: 'nodes.service',
+  workstream: 'nodes.workstream',
+  bridge: 'nodes.bridge',
+  router: 'nodes.router',
+  stack: 'nodes.stack',
+  action: 'nodes.action',
+  database: 'nodes.database',
+  infra: 'nodes.infra',
+  framework: 'nodes.framework',
+  capability: 'nodes.capability',
+  integration: 'nodes.integration',
+  brand: 'nodes.brand',
+  code: 'nodes.code',
+  overview: 'nodes.overview',
+  comment: 'nodes.comment',
+  spec: 'nodes.spec',
+  milestone: 'nodes.milestone',
+  persona: 'nodes.persona',
+  feature: 'nodes.feature',
+  dataEntity: 'nodes.dataEntity',
+  channel: 'nodes.channel',
+  kpi: 'nodes.kpi',
+  risk: 'nodes.risk',
+};
 
 // Helper: get active page directly from state (no get() indirection)
 function selectActivePage(s: { project: { pages: Page[] }; activePageId: string }): Page {
@@ -14,6 +42,7 @@ function selectActivePage(s: { project: { pages: Page[] }; activePageId: string 
 
 // Stats panel shown when nothing is selected
 function StatsPanel() {
+  const t = useT();
   const project = useProjectStore(s => s.project);
   const page = useProjectStore(s => selectActivePage(s));
 
@@ -34,7 +63,7 @@ function StatsPanel() {
   return (
     <Box sx={{ p: 2 }}>
       <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 700 }}>
-        Project Info
+        {t('inspector.projectInfo')}
       </Typography>
       <Typography variant="body2" color="text.secondary">
         {project.project.name}
@@ -48,19 +77,23 @@ function StatsPanel() {
       <Divider sx={{ my: 2 }} />
 
       <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 700 }}>
-        Page: {page.name}
+        {t('inspector.page', { name: page.name })}
       </Typography>
 
-      <Typography variant="body2">Nodes: {page.nodes.length}</Typography>
-      <Typography variant="body2">Edges: {page.edges.length}</Typography>
-      <Typography variant="body2">Unconnected: {unconnected}</Typography>
+      <Typography variant="body2">{t('inspector.nodes', { count: page.nodes.length })}</Typography>
+      <Typography variant="body2">{t('inspector.edges', { count: page.edges.length })}</Typography>
+      <Typography variant="body2">{t('inspector.unconnected', { count: unconnected })}</Typography>
 
       {Object.keys(nodeCounts).length > 0 && (
         <Box sx={{ mt: 1 }}>
-          <Typography variant="caption" color="text.secondary">By type:</Typography>
+          <Typography variant="caption" color="text.secondary">{t('inspector.byType')}</Typography>
           <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
             {Object.entries(nodeCounts).map(([type, count]) => (
-              <Chip key={type} label={`${nodeTypeRegistry[type as NodeKind]?.label ?? type}: ${count}`} size="small" />
+              <Chip
+                key={type}
+                label={`${t(nodeTranslationKeyByKind[type as NodeKind] ?? ('nodes.service' as TranslationKey))}: ${count}`}
+                size="small"
+              />
             ))}
           </Stack>
         </Box>
@@ -69,16 +102,16 @@ function StatsPanel() {
       {milestones.length > 0 && (
         <Box sx={{ mt: 2 }}>
           <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 700 }}>
-            Milestones
+            {t('inspector.milestones')}
           </Typography>
           {milestones.map(m => (
             <Box key={m.id} sx={{ mb: 1 }}>
               <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                {m.data.title as string || 'Untitled'}
+                {m.data.title as string || t('inspector.untitled')}
               </Typography>
               {m.data.dueDate && (
                 <Typography variant="caption" color="text.secondary">
-                  Due: {m.data.dueDate as string}
+                  {t('inspector.due', { date: m.data.dueDate as string })}
                 </Typography>
               )}
             </Box>
@@ -91,6 +124,7 @@ function StatsPanel() {
 
 // Node inspector
 function NodeInspector() {
+  const t = useT();
   const selectedNodeId = useProjectStore(s => s.selectedNodeId);
   const page = useProjectStore(s => selectActivePage(s));
   const updateNodeData = useProjectStore(s => s.updateNodeData);
@@ -108,7 +142,7 @@ function NodeInspector() {
   const [jsonDirty, setJsonDirty] = useState(false);
 
   const def = nodeTypeRegistry[node.type];
-  const nodeName = (node.data.name as string) || (node.data.title as string) || (node.data.brand as string) || def.label;
+  const nodeName = (node.data.name as string) || (node.data.title as string) || (node.data.brand as string) || t(nodeTranslationKeyByKind[node.type]);
 
   const handleChange = (key: string, value: unknown) => {
     updateNodeData(node.id, { [key]: value });
@@ -185,7 +219,7 @@ function NodeInspector() {
     try {
       const parsed = JSON.parse(jsonDraft) as unknown;
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-        setJsonError('JSON must be an object.');
+        setJsonError(t('inspector.jsonMustBeObject'));
         return;
       }
 
@@ -207,7 +241,7 @@ function NodeInspector() {
 
       if (Object.prototype.hasOwnProperty.call(value, 'data')) {
         if (!value.data || typeof value.data !== 'object' || Array.isArray(value.data)) {
-          setJsonError('`data` must be an object.');
+          setJsonError(t('inspector.dataMustBeObject'));
           return;
         }
         patch.data = value.data as Record<string, unknown>;
@@ -219,14 +253,14 @@ function NodeInspector() {
       if (Object.prototype.hasOwnProperty.call(value, 'position')) {
         const position = value.position as unknown;
         if (!position || typeof position !== 'object' || Array.isArray(position)) {
-          setJsonError('`position` must be an object with numeric `x` and `y`.');
+          setJsonError(t('inspector.positionInvalid'));
           return;
         }
 
         const x = (position as { x?: unknown }).x;
         const y = (position as { y?: unknown }).y;
         if (typeof x !== 'number' || !Number.isFinite(x) || typeof y !== 'number' || !Number.isFinite(y)) {
-          setJsonError('`position.x` and `position.y` must be finite numbers.');
+          setJsonError(t('inspector.positionXYInvalid'));
           return;
         }
 
@@ -238,7 +272,7 @@ function NodeInspector() {
         if (typeof stylePreset === 'string' && stylePresets.includes(stylePreset as NodeStylePreset)) {
           patch.stylePreset = stylePreset as NodeStylePreset;
         } else {
-          setJsonError(`Invalid stylePreset. Allowed: ${stylePresets.join(', ')}.`);
+          setJsonError(t('inspector.invalidStylePreset', { presets: stylePresets.join(', ') }));
           return;
         }
       }
@@ -246,10 +280,10 @@ function NodeInspector() {
       // Intentionally ignored on apply: immutable/system top-level keys and unknown keys.
       if (!patch.data && !patch.position && !patch.stylePreset) {
         if (hasImmutableTopLevelKeys) {
-          setJsonError('Only immutable/system fields were found. Editable fields: `data`, `position`, `stylePreset`.');
+          setJsonError(t('inspector.onlyImmutableFields'));
           return;
         }
-        setJsonError('No applicable fields found. Use `data`, `position` or `stylePreset`.');
+        setJsonError(t('inspector.noApplicableFields'));
         return;
       }
 
@@ -257,7 +291,7 @@ function NodeInspector() {
       setJsonError(null);
       setJsonDirty(false);
     } catch {
-      setJsonError('Invalid JSON format.');
+      setJsonError(t('inspector.invalidJson'));
     }
   };
 
@@ -274,10 +308,10 @@ function NodeInspector() {
       <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1, mb: 1 }}>
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-            {def.label}
+            {t(nodeTranslationKeyByKind[node.type])}
           </Typography>
           <Typography variant="subtitle2" sx={{ fontWeight: 700, lineHeight: 1.2, mt: 0.2 }}>
-            {nodeName || 'Untitled'}
+            {nodeName || t('inspector.untitled')}
           </Typography>
           <Stack direction="row" spacing={0.6} sx={{ mt: 0.4, alignItems: 'center', minWidth: 0 }}>
             <Typography
@@ -298,7 +332,7 @@ function NodeInspector() {
           </Stack>
         </Box>
         <Button size="small" color="error" onClick={() => removeNode(node.id)}>
-          Delete
+          {t('inspector.delete')}
         </Button>
       </Box>
       <Divider sx={{ mb: 2 }} />
@@ -309,8 +343,8 @@ function NodeInspector() {
         variant="fullWidth"
         sx={{ mb: 1.2, minHeight: 34, '& .MuiTab-root': { minHeight: 34, textTransform: 'none', fontWeight: 700, fontSize: 12 } }}
       >
-        <Tab value="form" label="Form" />
-        {showJsonEditor && <Tab value="json" label="JSON" />}
+        <Tab value="form" label={t('inspector.formTab')} />
+        {showJsonEditor && <Tab value="json" label={t('inspector.jsonTab')} />}
       </Tabs>
 
       {mode === 'form' || !showJsonEditor ? (
@@ -323,7 +357,7 @@ function NodeInspector() {
       ) : (
         <Stack spacing={1}>
           <Typography variant="caption" color="text.secondary">
-            Editable node JSON. Apply ignores immutable/system keys (for example <code>id</code>, <code>type</code>, <code>width</code>, <code>height</code>).
+            {t('inspector.jsonHelp')}
           </Typography>
           <TextField
             value={jsonDraft}
@@ -352,13 +386,13 @@ function NodeInspector() {
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
             <Stack direction="row" spacing={0.8} sx={{ flexWrap: 'wrap', gap: 0.8 }}>
               <Button size="small" variant="outlined" onClick={copyJson} sx={{ textTransform: 'none' }}>
-                Copy
+                {t('inspector.copy')}
               </Button>
               <Button size="small" variant="outlined" onClick={pasteJson} sx={{ textTransform: 'none' }}>
-                Paste
+                {t('inspector.paste')}
               </Button>
               <Button size="small" variant="outlined" onClick={resetJsonDraft} sx={{ textTransform: 'none' }}>
-                Reset
+                {t('inspector.reset')}
               </Button>
             </Stack>
             <Button
@@ -367,7 +401,7 @@ function NodeInspector() {
               onClick={applyJson}
               sx={{ textTransform: 'none', minWidth: 88, ml: 'auto' }}
             >
-              Apply
+              {t('inspector.apply')}
             </Button>
           </Box>
         </Stack>
@@ -375,21 +409,21 @@ function NodeInspector() {
 
       <Divider sx={{ my: 2 }} />
       <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
-        Connection Labels
+        {t('inspector.connectionLabels')}
       </Typography>
       {outgoingEdges.length === 0 ? (
         <Typography variant="caption" color="text.secondary">
-          No outgoing connections yet. Create an edge to add a label.
+          {t('inspector.noOutgoingConnections')}
         </Typography>
       ) : (
         <Stack spacing={1}>
           {outgoingEdges.map((edge, index) => (
             <TextField
               key={edge.id}
-              label={`To: ${targetNameById.get(edge.target) ?? edge.target}`}
+              label={t('inspector.toTarget', { name: targetNameById.get(edge.target) ?? edge.target })}
               value={edge.label ?? ''}
               onChange={e => updateEdgeLabel(edge.id, e.target.value)}
-              placeholder={`Optional label for connection ${index + 1}`}
+              placeholder={t('inspector.optionalLabel', { index: index + 1 })}
               size="small"
               fullWidth
             />
@@ -402,6 +436,7 @@ function NodeInspector() {
 
 // Edge inspector
 function EdgeInspector() {
+  const t = useT();
   const selectedEdgeId = useProjectStore(s => s.selectedEdgeId);
   const page = useProjectStore(s => selectActivePage(s));
   const updateEdgeLabel = useProjectStore(s => s.updateEdgeLabel);
@@ -414,20 +449,20 @@ function EdgeInspector() {
     <Box sx={{ p: 2 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
         <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-          Edge
+          {t('inspector.edge')}
         </Typography>
         <Button size="small" color="error" onClick={() => removeEdge(edge.id)}>
-          Delete
+          {t('inspector.delete')}
         </Button>
       </Box>
       <Divider sx={{ mb: 2 }} />
       <TextField
-        label="Label"
+        label={t('inspector.edgeLabel')}
         value={edge.label ?? ''}
         onChange={e => updateEdgeLabel(edge.id, e.target.value)}
         size="small"
         fullWidth
-        placeholder="Optional edge label..."
+        placeholder={t('inspector.optionalEdgeLabel')}
       />
     </Box>
   );

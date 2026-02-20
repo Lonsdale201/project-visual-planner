@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useT } from '../i18n';
 
 interface MarkdownDocsDialogProps {
   open: boolean;
@@ -28,7 +29,7 @@ interface MarkdownSection {
   markdown: string;
 }
 
-function parseMarkdownSections(markdown: string): MarkdownSection[] {
+function parseMarkdownSections(markdown: string, notesTitle: string, documentTitle: string): MarkdownSection[] {
   const lines = markdown.replace(/\r\n/g, '\n').split('\n');
   const sections: MarkdownSection[] = [];
 
@@ -37,7 +38,7 @@ function parseMarkdownSections(markdown: string): MarkdownSection[] {
 
   const flush = () => {
     if (!currentTitle && !currentBody.length) return;
-    const fallbackTitle = currentTitle || 'Notes';
+    const fallbackTitle = currentTitle || notesTitle;
     sections.push({
       id: fallbackTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       title: fallbackTitle,
@@ -62,7 +63,7 @@ function parseMarkdownSections(markdown: string): MarkdownSection[] {
   if (!sections.length) {
     return [{
       id: 'full-doc',
-      title: 'Document',
+      title: documentTitle,
       markdown,
     }];
   }
@@ -78,9 +79,13 @@ export default function MarkdownDocsDialog({
   paginateBySections = false,
   sectionsPerPage = 3,
 }: MarkdownDocsDialogProps) {
+  const t = useT();
   const [pageIndex, setPageIndex] = useState(0);
 
-  const sections = useMemo(() => parseMarkdownSections(markdown), [markdown]);
+  const sections = useMemo(
+    () => parseMarkdownSections(markdown, t('pdf.notes'), t('docs.document')),
+    [markdown, t],
+  );
   const totalPages = Math.max(1, Math.ceil(sections.length / sectionsPerPage));
   const safePageIndex = Math.min(pageIndex, totalPages - 1);
 
@@ -133,16 +138,18 @@ export default function MarkdownDocsDialog({
       </DialogContent>
       <DialogActions sx={{ justifyContent: 'space-between', px: 2 }}>
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-          {paginateBySections ? `Page ${safePageIndex + 1} of ${totalPages}` : `${sections.length} section(s)`}
+          {paginateBySections
+            ? t('docs.pageOf', { page: safePageIndex + 1, total: totalPages })
+            : t('docs.sections', { count: sections.length })}
         </Typography>
         <Stack direction="row" spacing={1}>
           {paginateBySections && (
             <>
-              <Button onClick={() => setPageIndex(safePageIndex - 1)} disabled={!canPrev}>Previous</Button>
-              <Button onClick={() => setPageIndex(safePageIndex + 1)} disabled={!canNext}>Next</Button>
+              <Button onClick={() => setPageIndex(safePageIndex - 1)} disabled={!canPrev}>{t('docs.previous')}</Button>
+              <Button onClick={() => setPageIndex(safePageIndex + 1)} disabled={!canNext}>{t('docs.next')}</Button>
             </>
           )}
-          <Button onClick={onClose} variant="contained">Close</Button>
+          <Button onClick={onClose} variant="contained">{t('docs.close')}</Button>
         </Stack>
       </DialogActions>
     </Dialog>

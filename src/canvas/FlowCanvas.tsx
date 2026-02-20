@@ -50,6 +50,7 @@ import type { EdgeType, NodeKind, ProjectNode, ProjectEdge as ProjectEdgeModel, 
 import { nodeTypeRegistry } from '../model/registry';
 import { nodeColorMap } from '../utils/nodeColors';
 import { v4 as uuid } from 'uuid';
+import { useT } from '../i18n';
 
 const nodeTypes: NodeTypes = {
   service: FlowNode,
@@ -366,6 +367,7 @@ interface StickyDragState {
 }
 
 export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProps) {
+  const t = useT();
   const reactFlowRef = useRef<ReactFlowInstance | null>(null);
   const clipboardRef = useRef<ClipboardPayload | null>(null);
   const pasteCounterRef = useRef(0);
@@ -1133,26 +1135,47 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
     useProjectStore.getState().setSelectedEdge(edge.id);
   }, []);
 
-  const onNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
-    event.preventDefault();
+  const openNodeContextMenuForNode = useCallback((nodeId: string, clientX: number, clientY: number) => {
     const alreadySelectedIds = new Set(nodes.filter(n => n.selected).map(n => n.id));
-    const preserveSelection = alreadySelectedIds.size >= 2 && alreadySelectedIds.has(node.id);
+    const preserveSelection = alreadySelectedIds.size >= 2 && alreadySelectedIds.has(nodeId);
 
     if (!preserveSelection) {
-      setNodes(curr => curr.map(n => ({ ...n, selected: n.id === node.id })));
+      setNodes(curr => curr.map(n => ({ ...n, selected: n.id === nodeId })));
       setEdges(curr => curr.map(e => (e.selected ? { ...e, selected: false } : e)));
 
       const state = useProjectStore.getState();
-      state.setSelectedNode(node.id);
+      state.setSelectedNode(nodeId);
       state.setSelectedEdge(null);
     }
 
     setNodeContextMenu({
-      nodeId: node.id,
-      mouseX: event.clientX + 2,
-      mouseY: event.clientY - 6,
+      nodeId,
+      mouseX: clientX + 2,
+      mouseY: clientY - 6,
     });
   }, [nodes, setNodes, setEdges]);
+
+  const onNodeContextMenu = useCallback((event: React.MouseEvent, node: Node) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openNodeContextMenuForNode(node.id, event.clientX, event.clientY);
+  }, [openNodeContextMenuForNode]);
+
+  const onPaneContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
+    event.preventDefault();
+
+    const target = event.target;
+    if (target instanceof HTMLElement) {
+      const nodeElement = target.closest('.react-flow__node');
+      const nodeId = nodeElement?.getAttribute('data-id');
+      if (nodeId) {
+        openNodeContextMenuForNode(nodeId, event.clientX, event.clientY);
+        return;
+      }
+    }
+
+    setNodeContextMenu(null);
+  }, [openNodeContextMenuForNode]);
 
   const onPaneClick = useCallback(() => {
     const s = useProjectStore.getState();
@@ -1467,7 +1490,7 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
 
           {treeNode.isStacked && (
             <Chip
-              label="S"
+              label={t('canvas.stackBadge')}
               size="small"
               sx={{
                 height: 18,
@@ -1495,7 +1518,7 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
             />
           )}
 
-          <Tooltip title={isHidden ? 'Show node/subtree' : 'Hide node/subtree'}>
+          <Tooltip title={isHidden ? t('canvas.showSubtree') : t('canvas.hideSubtree')}>
             <IconButton
               size="small"
               onClick={(event) => {
@@ -1522,6 +1545,7 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
     toggleNavCollapse,
     toggleNavFocus,
     toggleNodeHidden,
+    t,
   ]);
 
   return (
@@ -1538,6 +1562,7 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
         onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}
         onNodeContextMenu={onNodeContextMenu}
+        onPaneContextMenu={onPaneContextMenu}
         onPaneClick={onPaneClick}
         onDragOver={onDragOver}
         onDrop={onDrop}
@@ -1589,16 +1614,16 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
             <Stack direction="row" spacing={0.7} sx={{ alignItems: 'center' }}>
               <AccountTreeOutlinedIcon sx={{ fontSize: 16, color: '#4e607b' }} />
               <Typography sx={{ fontSize: 12.5, fontWeight: 800, color: '#27364c' }}>
-                Node Navigator
+                {t('canvas.nodeNavigator')}
               </Typography>
             </Stack>
             <Stack direction="row" spacing={0.4}>
-              <Tooltip title="Clear focus and hidden filters">
+              <Tooltip title={t('canvas.clearAll')}>
                 <IconButton size="small" onClick={clearNavigatorFilters} sx={{ width: 22, height: 22 }}>
                   <RestartAltIcon sx={{ fontSize: 15 }} />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Clear focus">
+              <Tooltip title={t('canvas.clearFocus')}>
                 <IconButton size="small" onClick={() => setFocusNodeId(null)} sx={{ width: 22, height: 22 }}>
                   <CloseOutlinedIcon sx={{ fontSize: 15 }} />
                 </IconButton>
@@ -1659,7 +1684,7 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
             </Box>
             <Box sx={{ px: 1.2, py: 1 }}>
               <Typography sx={{ fontSize: 12, color: '#334155', whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>
-                {body || 'Empty note'}
+                {body || t('canvas.emptyNote')}
               </Typography>
             </Box>
           </Paper>
@@ -1678,27 +1703,27 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
       >
         <MenuItem onClick={handleContextDuplicate}>
           <ListItemIcon><ContentCopyOutlinedIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Duplicate</ListItemText>
+          <ListItemText>{t('canvas.duplicate')}</ListItemText>
         </MenuItem>
         <MenuItem onClick={handleContextDelete}>
           <ListItemIcon><DeleteOutlineIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Delete</ListItemText>
+          <ListItemText>{t('canvas.delete')}</ListItemText>
         </MenuItem>
         <MenuItem onClick={handleContextDeselect}>
           <ListItemIcon><DeselectOutlinedIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Deselect</ListItemText>
+          <ListItemText>{t('canvas.deselect')}</ListItemText>
         </MenuItem>
         <MenuItem onClick={handleContextResetDefaults}>
           <ListItemIcon><RestartAltIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Reset to defaults</ListItemText>
+          <ListItemText>{t('canvas.resetDefaults')}</ListItemText>
         </MenuItem>
         <MenuItem onClick={handleContextStackSelected} disabled={selectedNodeCount < 2}>
           <ListItemIcon><AccountTreeOutlinedIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Stack selected</ListItemText>
+          <ListItemText>{t('canvas.stackSelected')}</ListItemText>
         </MenuItem>
         <MenuItem onClick={handleContextUnstack} disabled={contextNodeType !== 'stack'}>
           <ListItemIcon><AccountTreeOutlinedIcon fontSize="small" /></ListItemIcon>
-          <ListItemText>Unstack</ListItemText>
+          <ListItemText>{t('canvas.unstack')}</ListItemText>
         </MenuItem>
       </Menu>
     </div>

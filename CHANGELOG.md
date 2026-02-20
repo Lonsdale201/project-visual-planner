@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.1.0 - 2026-02-20
+
+### New
+- Two-language support: English / Hungarian.
+
+### Fix
+- Improved right-click context menu recognition for nodes.
+
 ## 2.0.0 - 2026-02-20
 
 ### New: Business Flow

@@ -1,6 +1,17 @@
 import React, { useMemo } from 'react';
 import {
-  TextField, MenuItem, Chip, Box, Stack, Typography, Autocomplete, InputAdornment, IconButton, Button, FormControlLabel, Switch,
+  Autocomplete,
+  Box,
+  Button,
+  Chip,
+  FormControlLabel,
+  IconButton,
+  InputAdornment,
+  MenuItem,
+  Stack,
+  Switch,
+  TextField,
+  Typography,
 } from '@mui/material';
 import CloudOutlinedIcon from '@mui/icons-material/CloudOutlined';
 import AddOutlinedIcon from '@mui/icons-material/AddOutlined';
@@ -17,6 +28,8 @@ import {
 } from '../../utils/presets';
 import { FrameworkPresetIcon, IntegrationPresetIcon, TechStackPresetIcon } from '../../utils/presetIcons';
 import { createServiceEndpoint, parseServiceEndpoints, serviceEndpointMethods } from '../../utils/serviceEndpoints';
+import { useT } from '../../i18n';
+import type { TranslationKey } from '../../i18n';
 
 interface SchemaFormProps {
   fields: FieldDef[];
@@ -32,6 +45,7 @@ interface PresetSelectFieldProps {
   customLabel: string;
   iconMode?: 'integration' | 'infra' | 'framework';
   onChange: (value: string) => void;
+  helperText: string;
 }
 
 interface PresetMultiSelectFieldProps {
@@ -41,6 +55,7 @@ interface PresetMultiSelectFieldProps {
   customLabel: string;
   iconMode: 'stack';
   onChange: (values: string[]) => void;
+  helperText: string;
 }
 
 function PresetPill({
@@ -94,6 +109,7 @@ function PresetSelectField({
   customLabel,
   iconMode = 'integration',
   onChange,
+  helperText,
 }: PresetSelectFieldProps) {
   const labelToPreset = useMemo(
     () => new Map(options.map(option => [option.label.toLowerCase(), option])),
@@ -128,7 +144,7 @@ function PresetSelectField({
           placeholder={field.placeholder ?? customLabel}
           size="small"
           fullWidth
-          helperText={`Type to search presets, or write your own (${customLabel}).`}
+          helperText={helperText}
           slotProps={{
             input: {
               ...params.InputProps,
@@ -155,6 +171,7 @@ function PresetMultiSelectField({
   customLabel,
   iconMode,
   onChange,
+  helperText,
 }: PresetMultiSelectFieldProps) {
   const labelToPreset = useMemo(
     () => new Map(options.map(option => [option.label.toLowerCase(), option])),
@@ -168,12 +185,12 @@ function PresetMultiSelectField({
     const normalized: string[] = [];
 
     for (const raw of rawValues) {
-      const value = (raw ?? '').trim();
-      if (!value) continue;
-      const key = value.toLowerCase();
+      const val = (raw ?? '').trim();
+      if (!val) continue;
+      const key = val.toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
-      normalized.push(value);
+      normalized.push(val);
     }
 
     return normalized;
@@ -216,7 +233,7 @@ function PresetMultiSelectField({
           placeholder={field.placeholder ?? customLabel}
           size="small"
           fullWidth
-          helperText={`Search stacks or add custom (${customLabel}).`}
+          helperText={helperText}
         />
       )}
     />
@@ -232,6 +249,7 @@ function ServiceEndpointsField({
   value: unknown;
   onChange: (value: unknown) => void;
 }) {
+  const t = useT();
   const endpoints = parseServiceEndpoints(value);
 
   const updateEndpoint = (index: number, patch: { method?: ServiceEndpointMethod; route?: string }) => {
@@ -270,7 +288,7 @@ function ServiceEndpointsField({
             <TextField
               select
               size="small"
-              label="Method"
+              label={t('schemaForm.method')}
               value={endpoint.method}
               onChange={e => updateEndpoint(index, { method: e.target.value as ServiceEndpointMethod })}
               sx={{ width: 118, flexShrink: 0 }}
@@ -284,7 +302,7 @@ function ServiceEndpointsField({
 
             <TextField
               size="small"
-              label="Route"
+              label={t('schemaForm.route')}
               value={endpoint.route}
               onChange={e => updateEndpoint(index, { route: e.target.value })}
               placeholder="/auth/login"
@@ -310,26 +328,31 @@ function ServiceEndpointsField({
         onClick={addEndpoint}
         sx={{ textTransform: 'none' }}
       >
-        Add endpoint
+        {t('schemaForm.addEndpoint')}
       </Button>
     </Box>
   );
 }
 
 export default function SchemaForm({ fields, data, nodeKind, onChange }: SchemaFormProps) {
+  const t = useT();
+
   return (
     <Stack spacing={2}>
       {fields.map(field => {
         const value = data[field.key];
+        const translatedFieldLabel = t((`fields.${field.key}` as TranslationKey));
+        const fieldLabel = translatedFieldLabel.startsWith('fields.') ? field.label : translatedFieldLabel;
 
         if (field.type === 'string' && nodeKind === 'integration' && field.key === 'name') {
           return (
             <PresetSelectField
               key={field.key}
-              field={field}
+              field={{ ...field, label: fieldLabel }}
               value={(value as string) ?? ''}
               options={integrationPresets}
-              customLabel="Custom integration"
+              customLabel={t('schemaForm.customIntegration')}
+              helperText={t('schemaForm.searchPresetsHelper', { custom: t('schemaForm.customIntegration') })}
               iconMode="integration"
               onChange={nextValue => onChange(field.key, nextValue)}
             />
@@ -340,10 +363,11 @@ export default function SchemaForm({ fields, data, nodeKind, onChange }: SchemaF
           return (
             <PresetSelectField
               key={field.key}
-              field={field}
+              field={{ ...field, label: fieldLabel }}
               value={(value as string) ?? ''}
               options={integrationPresets}
-              customLabel="Custom brand"
+              customLabel={t('schemaForm.customBrand')}
+              helperText={t('schemaForm.searchPresetsHelper', { custom: t('schemaForm.customBrand') })}
               iconMode="integration"
               onChange={nextValue => onChange(field.key, nextValue)}
             />
@@ -354,10 +378,11 @@ export default function SchemaForm({ fields, data, nodeKind, onChange }: SchemaF
           return (
             <PresetSelectField
               key={field.key}
-              field={field}
+              field={{ ...field, label: fieldLabel }}
               value={(value as string) ?? ''}
               options={infraPresets}
-              customLabel="Custom provider"
+              customLabel={t('schemaForm.customProvider')}
+              helperText={t('schemaForm.searchPresetsHelper', { custom: t('schemaForm.customProvider') })}
               iconMode="infra"
               onChange={nextValue => onChange(field.key, nextValue)}
             />
@@ -368,10 +393,11 @@ export default function SchemaForm({ fields, data, nodeKind, onChange }: SchemaF
           return (
             <PresetSelectField
               key={field.key}
-              field={field}
+              field={{ ...field, label: fieldLabel }}
               value={(value as string) ?? ''}
               options={frameworkPresets}
-              customLabel="Custom framework"
+              customLabel={t('schemaForm.customFramework')}
+              helperText={t('schemaForm.searchPresetsHelper', { custom: t('schemaForm.customFramework') })}
               iconMode="framework"
               onChange={nextValue => onChange(field.key, nextValue)}
             />
@@ -388,10 +414,11 @@ export default function SchemaForm({ fields, data, nodeKind, onChange }: SchemaF
           return (
             <PresetMultiSelectField
               key={field.key}
-              field={field}
+              field={{ ...field, label: fieldLabel }}
               values={(value as string[]) ?? []}
               options={combinedStackOptions}
-              customLabel="Custom stack"
+              customLabel={t('schemaForm.customStack')}
+              helperText={t('schemaForm.searchStacksHelper', { custom: t('schemaForm.customStack') })}
               iconMode="stack"
               onChange={nextValues => onChange(field.key, nextValues)}
             />
@@ -403,7 +430,7 @@ export default function SchemaForm({ fields, data, nodeKind, onChange }: SchemaF
             return (
               <TextField
                 key={field.key}
-                label={field.label}
+                label={fieldLabel}
                 value={(value as string) ?? ''}
                 onChange={e => onChange(field.key, e.target.value)}
                 placeholder={field.placeholder}
@@ -417,7 +444,7 @@ export default function SchemaForm({ fields, data, nodeKind, onChange }: SchemaF
             return (
               <TextField
                 key={field.key}
-                label={field.label}
+                label={fieldLabel}
                 value={(value as string) ?? ''}
                 onChange={e => onChange(field.key, e.target.value)}
                 placeholder={field.placeholder}
@@ -425,11 +452,7 @@ export default function SchemaForm({ fields, data, nodeKind, onChange }: SchemaF
                 fullWidth
                 multiline
                 minRows={isCodeContent ? 9 : 3}
-                helperText={
-                  isCodeContent
-                    ? 'Supports resize; paste code, JSON schema, REST snippets, or API contracts.'
-                    : 'Supports Markdown: **bold**, *italic*, `code`, [link](url), and simple lists.'
-                }
+                helperText={isCodeContent ? t('schemaForm.codeContentHelper') : t('schemaForm.markdownHelper')}
                 sx={{
                   '& .MuiInputBase-inputMultiline': {
                     resize: 'vertical',
@@ -449,7 +472,7 @@ export default function SchemaForm({ fields, data, nodeKind, onChange }: SchemaF
             return (
               <TextField
                 key={field.key}
-                label={field.label}
+                label={fieldLabel}
                 value={(value as string) ?? ''}
                 onChange={e => onChange(field.key, e.target.value)}
                 size="small"
@@ -463,18 +486,18 @@ export default function SchemaForm({ fields, data, nodeKind, onChange }: SchemaF
             );
 
           case 'tags': {
-            const tags = (value as string[]) ?? [];
+            const tagValues = (value as string[]) ?? [];
             return (
               <Box key={field.key}>
-                <Typography variant="caption" color="text.secondary">{field.label}</Typography>
+                <Typography variant="caption" color="text.secondary">{fieldLabel}</Typography>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
-                  {tags.map((tag, i) => (
+                  {tagValues.map((tag, i) => (
                     <Chip
                       key={`${tag}-${i}`}
                       label={tag}
                       size="small"
                       onDelete={() => {
-                        const newTags = tags.filter((_, idx) => idx !== i);
+                        const newTags = tagValues.filter((_, idx) => idx !== i);
                         onChange(field.key, newTags);
                       }}
                     />
@@ -483,14 +506,14 @@ export default function SchemaForm({ fields, data, nodeKind, onChange }: SchemaF
                 <TextField
                   size="small"
                   fullWidth
-                  placeholder={field.placeholder ?? 'Add tag and press Enter...'}
+                  placeholder={field.placeholder ?? t('schemaForm.addTagPlaceholder')}
                   onKeyDown={e => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
                       const input = e.target as HTMLInputElement;
                       const val = input.value.trim();
-                      if (val && !tags.includes(val)) {
-                        onChange(field.key, [...tags, val]);
+                      if (val && !tagValues.includes(val)) {
+                        onChange(field.key, [...tagValues, val]);
                         input.value = '';
                       }
                     }
@@ -504,7 +527,7 @@ export default function SchemaForm({ fields, data, nodeKind, onChange }: SchemaF
             return (
               <ServiceEndpointsField
                 key={field.key}
-                field={field}
+                field={{ ...field, label: fieldLabel }}
                 value={value}
                 onChange={nextValue => onChange(field.key, nextValue)}
               />
@@ -514,7 +537,7 @@ export default function SchemaForm({ fields, data, nodeKind, onChange }: SchemaF
             return (
               <TextField
                 key={field.key}
-                label={field.label}
+                label={fieldLabel}
                 type="date"
                 value={(value as string) ?? ''}
                 onChange={e => onChange(field.key, e.target.value)}
@@ -528,7 +551,7 @@ export default function SchemaForm({ fields, data, nodeKind, onChange }: SchemaF
             return (
               <TextField
                 key={field.key}
-                label={field.label}
+                label={fieldLabel}
                 type="number"
                 value={typeof value === 'number' ? value : Number(value ?? 0)}
                 onChange={e => onChange(field.key, Number(e.target.value))}
@@ -548,7 +571,7 @@ export default function SchemaForm({ fields, data, nodeKind, onChange }: SchemaF
                     onChange={(_, checked) => onChange(field.key, checked)}
                   />
                 )}
-                label={field.label}
+                label={fieldLabel}
               />
             );
 

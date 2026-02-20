@@ -49,6 +49,8 @@ import {
 } from '../../utils/presets';
 import { FrameworkPresetIcon, IntegrationPresetIcon, TechStackPresetIcon } from '../../utils/presetIcons';
 import { useProjectStore } from '../../store/useProjectStore';
+import { useT } from '../../i18n';
+import type { TFunction, TranslationKey } from '../../i18n';
 
 const iconMap: Record<string, React.ReactElement> = {
   DnsOutlined: <DnsOutlinedIcon sx={{ fontSize: 14 }} />,
@@ -68,6 +70,32 @@ const iconMap: Record<string, React.ReactElement> = {
   CampaignOutlined: <CampaignOutlinedIcon sx={{ fontSize: 14 }} />,
   TrackChangesOutlined: <TrackChangesOutlinedIcon sx={{ fontSize: 14 }} />,
   WarningAmberOutlined: <WarningAmberOutlinedIcon sx={{ fontSize: 14 }} />,
+};
+
+const nodeTranslationKeyByKind: Record<NodeKind, TranslationKey> = {
+  service: 'nodes.service',
+  workstream: 'nodes.workstream',
+  bridge: 'nodes.bridge',
+  router: 'nodes.router',
+  stack: 'nodes.stack',
+  action: 'nodes.action',
+  database: 'nodes.database',
+  infra: 'nodes.infra',
+  framework: 'nodes.framework',
+  capability: 'nodes.capability',
+  integration: 'nodes.integration',
+  brand: 'nodes.brand',
+  code: 'nodes.code',
+  overview: 'nodes.overview',
+  comment: 'nodes.comment',
+  spec: 'nodes.spec',
+  milestone: 'nodes.milestone',
+  persona: 'nodes.persona',
+  feature: 'nodes.feature',
+  dataEntity: 'nodes.dataEntity',
+  channel: 'nodes.channel',
+  kpi: 'nodes.kpi',
+  risk: 'nodes.risk',
 };
 
 interface FlowNodeProps {
@@ -253,7 +281,7 @@ function collectOverviewStats(pages: Page[]): {
     .map(node => ({
       id: node.id,
       order: toNumber(node.data.order, Number.MAX_SAFE_INTEGER),
-      title: toStr(node.data.title) || toStr(node.data.milestoneLabel) || 'Untitled milestone',
+      title: toStr(node.data.title) || toStr(node.data.milestoneLabel) || 'Milestone',
       goal: toStr(node.data.goal),
       priority: toStr(node.data.priority).toLowerCase(),
     }))
@@ -433,61 +461,61 @@ function getSummary(kind: NodeKind, data: Record<string, unknown>): string {
   }
 }
 
-function getMetaLabel(kind: NodeKind, data: Record<string, unknown>): string {
+function getMetaLabel(kind: NodeKind, data: Record<string, unknown>, t: TFunction): string {
   switch (kind) {
     case 'service':
-      return 'Service';
+      return t('nodes.service');
     case 'workstream':
-      return toStr(data.owner) ? `Owner: ${toStr(data.owner)}` : 'Workstream';
+      return toStr(data.owner) ? t('flowNode.ownerMeta', { owner: toStr(data.owner) }) : t('nodes.workstream');
     case 'bridge':
-      return 'Bridge';
+      return t('nodes.bridge');
     case 'router':
-      return toStr(data.tag) || 'Router';
+      return toStr(data.tag) || t('nodes.router');
     case 'stack':
-      return 'Stack';
+      return t('nodes.stack');
     case 'database':
-      return toStr(data.dbType) || 'Database';
+      return toStr(data.dbType) || t('nodes.database');
     case 'infra':
-      return toStr(data.provider) || 'Infrastructure';
+      return toStr(data.provider) || t('nodes.infra');
     case 'framework':
-      return toStr(data.framework) || 'Framework';
+      return toStr(data.framework) || t('nodes.framework');
     case 'capability':
-      return toStr(data.maturity) ? `Maturity: ${toStr(data.maturity)}` : 'Capability';
+      return toStr(data.maturity) ? t('flowNode.maturityMeta', { maturity: toStr(data.maturity) }) : t('nodes.capability');
     case 'integration':
-      return toStr(data.boundary) === 'internal' ? 'Internal' : 'External';
+      return toStr(data.boundary) === 'internal' ? t('enums.internal') : t('enums.external');
     case 'brand':
       return '';
     case 'code':
       return parseCodeLanguage(data.language).toUpperCase();
     case 'overview':
-      return 'Live';
+      return t('flowNode.live');
     case 'comment':
       return '';
     case 'spec':
-      return 'Spec';
+      return t('flowNode.spec');
     case 'milestone':
-      return toStr(data.dueDate) ? `Due ${toStr(data.dueDate)}` : 'Milestone';
+      return toStr(data.dueDate) ? t('flowNode.dueMeta', { date: toStr(data.dueDate) }) : t('nodes.milestone');
     case 'action':
       return '';
     case 'persona':
-      return toStr(data.priority) ? `Priority: ${toStr(data.priority)}` : 'Persona';
+      return toStr(data.priority) ? t('flowNode.priorityMeta', { priority: toStr(data.priority) }) : t('nodes.persona');
     case 'feature':
-      return toStr(data.status) || 'Feature';
+      return toStr(data.status) || t('nodes.feature');
     case 'dataEntity':
-      return toStr(data.source) || 'Data Entity';
+      return toStr(data.source) || t('nodes.dataEntity');
     case 'channel':
-      return toStr(data.channelType) || 'Channel';
+      return toStr(data.channelType) || t('nodes.channel');
     case 'kpi':
-      return toStr(data.unit) || 'KPI';
+      return toStr(data.unit) || t('nodes.kpi');
     case 'risk':
-      return toStr(data.impact) ? `Impact: ${toStr(data.impact)}` : 'Risk';
+      return toStr(data.impact) ? t('flowNode.impactMeta', { impact: toStr(data.impact) }) : t('nodes.risk');
   }
 }
 
-function getDetailRows(kind: NodeKind, data: Record<string, unknown>): Array<{ label: string; value: string }> {
+function getDetailRows(kind: NodeKind, data: Record<string, unknown>, t: TFunction): Array<{ label: string; value: string }> {
   if (kind === 'stack') {
     const items = Array.isArray(data.items) ? data.items.length : 0;
-    return [{ label: 'Items', value: String(items) }];
+    return [{ label: t('flowNode.items'), value: String(items) }];
   }
 
   if (kind === 'router') {
@@ -496,8 +524,8 @@ function getDetailRows(kind: NodeKind, data: Record<string, unknown>): Array<{ l
 
   if (kind === 'integration') {
     return [
-      { label: 'URL', value: formatIntegrationUrl(data.baseUrl) },
-      { label: 'Auth', value: toStr(data.authMethod) || 'n/a' },
+      { label: t('flowNode.url'), value: formatIntegrationUrl(data.baseUrl) },
+      { label: t('flowNode.auth'), value: toStr(data.authMethod) || t('flowNode.na') },
     ];
   }
 
@@ -505,71 +533,71 @@ function getDetailRows(kind: NodeKind, data: Record<string, unknown>): Array<{ l
     const flow = toStr(data.toFlow) === 'business' ? 'business' : 'development';
     const syncCount = toTags(data.syncFields).length;
     return [
-      { label: 'Target flow', value: flow },
-      { label: 'Sync fields', value: String(syncCount) },
+      { label: t('flowNode.targetFlow'), value: flow },
+      { label: t('flowNode.syncFields'), value: String(syncCount) },
     ];
   }
 
   if (kind === 'workstream') {
     return [
-      { label: 'Owner', value: toStr(data.owner) || 'n/a' },
-      { label: 'Deliverables', value: String(toTags(data.deliverables).length) },
+      { label: t('fields.owner'), value: toStr(data.owner) || t('flowNode.na') },
+      { label: t('flowNode.deliverables'), value: String(toTags(data.deliverables).length) },
     ];
   }
 
   if (kind === 'capability') {
     return [
-      { label: 'Area', value: toStr(data.area) || 'n/a' },
-      { label: 'Maturity', value: toStr(data.maturity) || 'n/a' },
+      { label: t('fields.area'), value: toStr(data.area) || t('flowNode.na') },
+      { label: t('fields.maturity'), value: toStr(data.maturity) || t('flowNode.na') },
     ];
   }
 
   if (kind === 'persona') {
     return [
-      { label: 'Role', value: toStr(data.role) || 'n/a' },
-      { label: 'Priority', value: toStr(data.priority) || 'n/a' },
+      { label: t('flowNode.role'), value: toStr(data.role) || t('flowNode.na') },
+      { label: t('fields.priority'), value: toStr(data.priority) || t('flowNode.na') },
     ];
   }
 
   if (kind === 'feature') {
     return [
-      { label: 'Priority', value: toStr(data.priority) || 'n/a' },
-      { label: 'Status', value: toStr(data.status) || 'n/a' },
+      { label: t('fields.priority'), value: toStr(data.priority) || t('flowNode.na') },
+      { label: t('fields.status'), value: toStr(data.status) || t('flowNode.na') },
     ];
   }
 
   if (kind === 'dataEntity') {
     return [
-      { label: 'Source', value: toStr(data.source) || 'n/a' },
-      { label: 'Owner', value: toStr(data.owner) || 'n/a' },
+      { label: t('fields.source'), value: toStr(data.source) || t('flowNode.na') },
+      { label: t('fields.owner'), value: toStr(data.owner) || t('flowNode.na') },
     ];
   }
 
   if (kind === 'channel') {
     return [
-      { label: 'Type', value: toStr(data.channelType) || 'n/a' },
-      { label: 'Direction', value: toStr(data.direction) || 'n/a' },
+      { label: t('fields.channelType'), value: toStr(data.channelType) || t('flowNode.na') },
+      { label: t('fields.direction'), value: toStr(data.direction) || t('flowNode.na') },
     ];
   }
 
   if (kind === 'kpi') {
     return [
-      { label: 'Target', value: toStr(data.target) || 'TBD' },
-      { label: 'Owner', value: toStr(data.owner) || 'n/a' },
+      { label: t('fields.target'), value: toStr(data.target) || 'TBD' },
+      { label: t('fields.owner'), value: toStr(data.owner) || t('flowNode.na') },
     ];
   }
 
   if (kind === 'risk') {
     return [
-      { label: 'Impact', value: toStr(data.impact) || 'n/a' },
-      { label: 'Likelihood', value: toStr(data.likelihood) || 'n/a' },
+      { label: t('fields.impact'), value: toStr(data.impact) || t('flowNode.na') },
+      { label: t('fields.likelihood'), value: toStr(data.likelihood) || t('flowNode.na') },
     ];
   }
 
   return [];
 }
 
-function getBridgeTargetStatus(project: Project, data: Record<string, unknown>): {
+function getBridgeTargetStatus(project: Project, data: Record<string, unknown>, t: TFunction): {
   state: 'valid' | 'warning' | 'error';
   message: string;
 } {
@@ -579,31 +607,31 @@ function getBridgeTargetStatus(project: Project, data: Record<string, unknown>):
   const flowGraph = project.flows?.[targetFlow];
 
   if (!flowGraph) {
-    return { state: 'error', message: `Target flow "${targetFlow}" is missing.` };
+    return { state: 'error', message: t('flowNode.bridgeFlowMissing', { flow: targetFlow }) };
   }
 
   if (!targetPageId) {
-    return { state: 'warning', message: 'Set Target Page ID.' };
+    return { state: 'warning', message: t('flowNode.bridgeSetPageId') };
   }
 
   const targetPage = flowGraph.pages.find(page => page.id === targetPageId);
   if (!targetPage) {
-    return { state: 'error', message: `Target page "${targetPageId}" not found in ${targetFlow}.` };
+    return { state: 'error', message: t('flowNode.bridgePageNotFound', { pageId: targetPageId, flow: targetFlow }) };
   }
 
   if (!targetNodeId) {
-    return { state: 'warning', message: `Set Target Node ID (page: ${targetPage.name}).` };
+    return { state: 'warning', message: t('flowNode.bridgeSetNodeId', { pageName: targetPage.name }) };
   }
 
   const targetNode = targetPage.nodes.find(node => node.id === targetNodeId);
   if (!targetNode) {
-    return { state: 'error', message: `Target node "${targetNodeId}" not found in page "${targetPage.name}".` };
+    return { state: 'error', message: t('flowNode.bridgeNodeNotFound', { nodeId: targetNodeId, pageName: targetPage.name }) };
   }
 
   const targetName = toStr(targetNode.data.name) || toStr(targetNode.data.title) || targetNode.type;
   return {
     state: 'valid',
-    message: `Resolved: ${targetFlow} / ${targetPage.name} / ${targetName}`,
+    message: t('flowNode.bridgeResolved', { flow: targetFlow, pageName: targetPage.name, nodeName: targetName }),
   };
 }
 
@@ -699,6 +727,7 @@ function NodePresetIcon({ kind, data }: { kind: NodeKind; data: Record<string, u
 }
 
 export default function FlowNode({ id, data, selected }: FlowNodeProps) {
+  const t = useT();
   const project = useProjectStore(s => s.project);
   const direction = useProjectStore(s => s.project.ui.direction);
   const page = useProjectStore(s => selectActivePage(s));
@@ -716,14 +745,14 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
   const isBusinessFlow = project.activeFlow === 'business';
   const isOverviewDisabledInBusiness = isBusinessFlow && kind === 'overview';
 
-  const title = toStr(data.name) || toStr(data.title) || 'Untitled node';
+  const title = toStr(data.name) || toStr(data.title) || t('flowNode.untitledNode');
   const brandName = kind === 'brand' ? toStr(data.brand) : '';
   const brandPreset = kind === 'brand' ? findPresetByLabel(integrationPresets, brandName) : undefined;
   const summary = getSummary(kind, data);
   const serviceEndpoints = kind === 'service' ? parseServiceEndpoints(data.endpoints) : [];
-  const detailRows = getDetailRows(kind, data);
-  const metaLabel = getMetaLabel(kind, data);
-  const bridgeTargetStatus = kind === 'bridge' ? getBridgeTargetStatus(project, data) : null;
+  const detailRows = getDetailRows(kind, data, t);
+  const metaLabel = getMetaLabel(kind, data, t);
+  const bridgeTargetStatus = kind === 'bridge' ? getBridgeTargetStatus(project, data, t) : null;
   const dbSchemaSource = kind === 'database' ? toStr(data.schemaNotes) : '';
   const hasDbSchemaInput = kind === 'database' && dbSchemaSource.trim().length > 0;
   const dbSchema = kind === 'database' ? parseDbSchema(dbSchemaSource) : [];
@@ -771,7 +800,9 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
   const milestoneFlowCount = kind === 'milestone' ? getConnectedFlowNodeCount(page, id) : 0;
   const milestoneDueDate = kind === 'milestone' ? toStr(data.dueDate) : '';
   const isOverview = kind === 'overview';
-  const floatingTypeLabel = kind === 'milestone' ? (toStr(data.milestoneLabel) || def.label) : def.label;
+  const floatingTypeLabel = kind === 'milestone'
+    ? (toStr(data.milestoneLabel) || t(nodeTranslationKeyByKind[kind]))
+    : t(nodeTranslationKeyByKind[kind]);
   const showFloatingTypeBadge = !isOverview && !(isBusinessFlow && kind === 'comment');
   const attachedCommentCount = Math.max(0, toNumber(data.attachedCommentCount, 0));
   const attachedCodeCount = Math.max(0, toNumber(data.attachedCodeCount, 0));
@@ -1297,7 +1328,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                       </>
                     ) : (
                       <Typography sx={{ px: 1.1, py: 0.9, fontSize: 12, color: '#75849a' }}>
-                        Schema provided, but format is not recognized yet.
+                        {t('flowNode.schemaNotRecognized')}
                       </Typography>
                     )}
                   </Box>
@@ -1305,7 +1336,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                   <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', gap: 0.7 }}>
                     <Stack direction="row" spacing={0.65} sx={{ flexWrap: 'wrap', gap: 0.6 }}>
                       <Chip
-                        label={`Columns: ${dbSchemaPreview.length}`}
+                        label={t('flowNode.columns', { count: dbSchemaPreview.length })}
                         size="small"
                         sx={{
                           height: 22,
@@ -1318,7 +1349,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                       />
                       {dbSchemaExtraCount > 0 && (
                         <Chip
-                          label={`+${dbSchemaExtraCount} more`}
+                          label={t('flowNode.moreCount', { count: dbSchemaExtraCount })}
                           size="small"
                           sx={{
                             height: 22,
@@ -1347,7 +1378,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                           py: 0.3,
                         }}
                       >
-                        {dbSchemaExpanded ? 'Collapse' : 'Expand full schema'}
+                        {dbSchemaExpanded ? t('flowNode.collapse') : t('flowNode.expandFullSchema')}
                       </Button>
                     )}
                   </Stack>
@@ -1367,7 +1398,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                 {[
                   {
                     key: 'integrations',
-                    label: 'INTEGRATIONS',
+                    label: t('flowNode.integrations'),
                     value: overviewStats.integrations,
                     icon: <ApiOutlinedIcon sx={{ fontSize: 14 }} />,
                     iconBg: '#dfe6ff',
@@ -1375,7 +1406,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                   },
                   {
                     key: 'actions',
-                    label: 'ACTIONS',
+                    label: t('flowNode.actions'),
                     value: overviewStats.actionTypes.length,
                     icon: <PlayArrowOutlinedIcon sx={{ fontSize: 14 }} />,
                     iconBg: '#f8dff0',
@@ -1383,7 +1414,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                   },
                   {
                     key: 'databases',
-                    label: 'DB TYPES',
+                    label: t('flowNode.dbTypes'),
                     value: overviewStats.databases.length,
                     icon: <StorageOutlinedIcon sx={{ fontSize: 14 }} />,
                     iconBg: '#feeccf',
@@ -1431,10 +1462,10 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
               <Box sx={{ mt: 0.95, mb: 0.95 }}>
                 <Stack direction="row" sx={{ alignItems: 'center', mb: 0.65 }}>
                   <Typography sx={{ fontSize: 12.5, fontWeight: 800, color: '#6c7789', letterSpacing: 0.3 }}>
-                    TECH STACK
+                    {t('flowNode.techStack')}
                   </Typography>
                   <Box sx={{ flexGrow: 1 }} />
-                  <Tooltip title={overviewStacksShowLabels ? 'Hide stack labels' : 'Show stack labels'}>
+                  <Tooltip title={overviewStacksShowLabels ? t('flowNode.hideStackLabels') : t('flowNode.showStackLabels')}>
                     <IconButton
                       size="small"
                       onClick={toggleOverviewStackLabels}
@@ -1457,7 +1488,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                     gap: 0.7,
                   }}
                 >
-                    {(overviewStacks.length ? overviewStacks : ['No stacks yet']).map((stackName, index) => {
+                    {(overviewStacks.length ? overviewStacks : [t('flowNode.noStacksYet')]).map((stackName, index) => {
                     const stackPreset =
                       findPresetByLabel(stackPresets, stackName)
                       ?? findPresetByLabel(frameworkPresets, stackName)
@@ -1515,7 +1546,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
               <Box>
                 <Stack direction="row" sx={{ alignItems: 'center', mb: 0.7 }}>
                   <Typography sx={{ fontSize: 10.5, fontWeight: 700, letterSpacing: 0.45, color: '#8995a8' }}>
-                    MILESTONES
+                    {t('flowNode.milestonesLabel')}
                   </Typography>
                   <Box
                     sx={{
@@ -1544,7 +1575,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
 
                 {overviewStats.milestoneItems.length === 0 ? (
                   <Typography sx={{ fontSize: 12.5, color: '#7a8798' }}>
-                    No milestones yet.
+                    {t('flowNode.noMilestonesYet')}
                   </Typography>
                 ) : (
                   <Box sx={{ position: 'relative', pl: 0, pt: 0.1, pb: 0.1 }}>
@@ -1640,7 +1671,9 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                         py: 0.3,
                       }}
                     >
-                      {overviewMilestonesExpanded ? 'Collapse milestones' : `Expand milestones (+${overviewStats.milestoneItems.length - 4})`}
+                      {overviewMilestonesExpanded
+                        ? t('flowNode.collapseMilestones')
+                        : t('flowNode.expandMilestones', { count: overviewStats.milestoneItems.length - 4 })}
                     </Button>
                   </Box>
                 )}
@@ -1648,7 +1681,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
             </>
           ) : isOverviewDisabledInBusiness ? (
             <Typography sx={{ fontSize: 12.8, color: '#8b97a9', lineHeight: 1.45 }}>
-              Project Overview is temporarily disabled in Business flow.
+              {t('flowNode.overviewDisabledBusiness')}
             </Typography>
           ) : kind === 'code' ? (
             <>
@@ -1683,7 +1716,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                     <Typography sx={{ color: '#7a8798', fontSize: 11 }}>
                       {codeLineCount} lines
                     </Typography>
-                    <Tooltip title="Copy code">
+                    <Tooltip title={t('flowNode.copyCode')}>
                       <IconButton
                         size="small"
                         onClick={copyCodeToClipboard}
@@ -1727,7 +1760,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
               <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', gap: 0.7 }}>
                 <Stack direction="row" spacing={0.6} sx={{ flexWrap: 'wrap', gap: 0.55 }}>
                   <Chip
-                    label={`Format: ${codeLanguage}`}
+                    label={t('flowNode.formatLabel', { lang: codeLanguage })}
                     size="small"
                     sx={{
                       height: 22,
@@ -1739,7 +1772,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                     }}
                   />
                   <Chip
-                    label={`Lines: ${codeLineCount}`}
+                    label={t('flowNode.linesLabel', { count: codeLineCount })}
                     size="small"
                     sx={{
                       height: 22,
@@ -1767,7 +1800,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                     py: 0.3,
                   }}
                 >
-                  {codeExpanded ? 'Collapse' : 'Expand full content'}
+                  {codeExpanded ? t('flowNode.collapse') : t('flowNode.expandFullContent')}
                 </Button>
               </Stack>
             </>
@@ -1779,7 +1812,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
 
               {stackItems.length === 0 ? (
                 <Typography sx={{ fontSize: 12.5, color: '#8b97a9' }}>
-                  No stacked items yet.
+                  {t('flowNode.noStackedItems')}
                 </Typography>
               ) : (
                 <Box
@@ -1820,7 +1853,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                       {stackActiveItem?.type?.toUpperCase() ?? 'NODE'}
                     </Typography>
                     <Typography sx={{ fontSize: 13.5, color: '#2d3a4f', fontWeight: 700, lineHeight: 1.28 }}>
-                      {compact(stackActiveItem?.name ?? 'Untitled', 60)}
+                      {compact(stackActiveItem?.name ?? t('flowNode.untitled'), 60)}
                     </Typography>
                     {stackActiveItem?.tag && (
                       <Chip
@@ -1849,7 +1882,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
 
               {serviceEndpoints.length === 0 ? (
                 <Typography sx={{ fontSize: 12.5, color: '#8b97a9' }}>
-                  No endpoints yet. Add them from the sidebar.
+                  {t('flowNode.noEndpoints')}
                 </Typography>
               ) : (
                 <Stack spacing={0.58}>
@@ -1893,7 +1926,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
 
                   {serviceEndpoints.length > 4 && (
                     <Chip
-                      label={`+${serviceEndpoints.length - 4} more endpoints`}
+                      label={t('flowNode.moreEndpoints', { count: serviceEndpoints.length - 4 })}
                       size="small"
                       sx={{
                         alignSelf: 'flex-start',
@@ -1945,13 +1978,13 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                     lineHeight: 1.35,
                   }}
                 >
-                  {bridgeTargetStatus?.message ?? 'Bridge target not configured.'}
+                  {bridgeTargetStatus?.message ?? t('flowNode.bridgeNotConfigured')}
                 </Typography>
               </Box>
               <Stack direction="row" spacing={0.58} sx={{ flexWrap: 'wrap', gap: 0.55 }}>
                 {toStr(data.toPageId) && (
                   <Chip
-                    label={`Page: ${compact(toStr(data.toPageId), 20)}`}
+                    label={t('flowNode.bridgePageChip', { id: compact(toStr(data.toPageId), 20) })}
                     size="small"
                     sx={{
                       height: 22,
@@ -1965,7 +1998,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                 )}
                 {toStr(data.toNodeId) && (
                   <Chip
-                    label={`Node: ${compact(toStr(data.toNodeId), 20)}`}
+                    label={t('flowNode.bridgeNodeChip', { id: compact(toStr(data.toNodeId), 20) })}
                     size="small"
                     sx={{
                       height: 22,
@@ -2131,7 +2164,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                   ))}
                   {toTags(data.attributes).length > 6 && (
                     <Typography sx={{ px: 1.1, py: 0.4, fontSize: 11, color: '#6b8f74' }}>
-                      +{toTags(data.attributes).length - 6} more
+                      {t('flowNode.moreCount', { count: toTags(data.attributes).length - 6 })}
                     </Typography>
                   )}
                 </Box>
@@ -2147,7 +2180,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                 )}
                 {toStr(data.owner) && (
                   <Chip
-                    label={`Owner: ${compact(toStr(data.owner), 20)}`}
+                    label={t('flowNode.ownerMeta', { owner: compact(toStr(data.owner), 20) })}
                     size="small"
                     sx={{ height: 22, borderRadius: 1.7, bgcolor: '#f8fafc', border: '1px solid #e7edf3', color: '#4f5f72', '& .MuiChip-label': { fontSize: 11, fontWeight: 600, px: 1 } }}
                   />
@@ -2224,7 +2257,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
               {/* Owner */}
               {toStr(data.owner) && (
                 <Chip
-                  label={`Owner: ${compact(toStr(data.owner), 25)}`}
+                  label={t('flowNode.ownerMeta', { owner: compact(toStr(data.owner), 25) })}
                   size="small"
                   sx={{ height: 22, borderRadius: 1.7, bgcolor: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', '& .MuiChip-label': { fontSize: 11, fontWeight: 600, px: 1 } }}
                 />
@@ -2291,7 +2324,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
             <Stack direction="row" sx={{ alignItems: 'center', gap: 0.6 }}>
               {milestoneDueDate && (
                 <Chip
-                  label={`Due ${milestoneDueDate}`}
+                  label={t('flowNode.dueChip', { date: milestoneDueDate })}
                   size="small"
                   sx={{
                     height: 22,
@@ -2305,7 +2338,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
               )}
               <Box sx={{ flexGrow: 1 }} />
               <Chip
-                label={`Flow: ${milestoneFlowCount}`}
+                label={t('flowNode.flowChip', { count: milestoneFlowCount })}
                 size="small"
                 sx={{
                   height: 22,

@@ -17,14 +17,18 @@ import SettingsDialog from './SettingsDialog';
 import MarkdownDocsDialog from './MarkdownDocsDialog';
 import { APP_VERSION } from './appMeta';
 import { useProjectStore } from '../store/useProjectStore';
+import { useI18nStore, useT } from '../i18n';
 import type { FlowMode } from '../model/types';
 import changelogMarkdown from '../../CHANGELOG.md?raw';
 import infoMarkdown from '../../INFO.md?raw';
+import infoMarkdownHu from '../../INFO.hu.md?raw';
 
 const LEFT_DRAWER_WIDTH = 220;
 const RIGHT_DRAWER_WIDTH = 320;
 
 export default function AppShell() {
+  const t = useT();
+  const locale = useI18nStore(s => s.locale);
   const projectName = useProjectStore(s => s.project.project.name);
   const dirty = useProjectStore(s => s.dirty);
   const selectedNodeId = useProjectStore(s => s.selectedNodeId);
@@ -73,7 +77,7 @@ export default function AppShell() {
           </Typography>
 
           <Chip
-            label={dirty ? 'Unsaved' : 'Saved'}
+            label={dirty ? t('app.unsaved') : t('app.saved')}
             size="small"
             color={dirty ? 'warning' : 'success'}
             sx={{ height: 22, fontSize: '0.7rem' }}
@@ -115,8 +119,8 @@ export default function AppShell() {
               },
             }}
           >
-            <ToggleButton value="development">Development</ToggleButton>
-            <ToggleButton value="business">Business Brief</ToggleButton>
+            <ToggleButton value="development">{t('app.development')}</ToggleButton>
+            <ToggleButton value="business">{t('app.businessBrief')}</ToggleButton>
           </ToggleButtonGroup>
 
           <Box sx={{ mx: 1, flexGrow: 1, minWidth: 0, display: 'flex' }}>
@@ -125,19 +129,19 @@ export default function AppShell() {
 
           <ImportExportButtons />
 
-          <Tooltip title="New Project">
+          <Tooltip title={t('app.newProject')}>
             <IconButton color="inherit" onClick={resetProject}>
               <AddCircleOutlineIcon />
             </IconButton>
           </Tooltip>
 
-          <Tooltip title="Settings">
+          <Tooltip title={t('app.settings')}>
             <IconButton color="inherit" onClick={() => setSettingsOpen(true)}>
               <SettingsOutlinedIcon />
             </IconButton>
           </Tooltip>
 
-          <Tooltip title="Node Navigator">
+          <Tooltip title={t('app.nodeNavigator')}>
             <IconButton
               color="inherit"
               onClick={() => setNavigatorOpen(prev => !prev)}
@@ -217,7 +221,7 @@ export default function AppShell() {
       <MarkdownDocsDialog
         open={changelogOpen}
         onClose={() => setChangelogOpen(false)}
-        title="Changelog"
+        title={t('app.changelog')}
         markdown={changelogMarkdown}
         paginateBySections
         sectionsPerPage={3}
@@ -226,8 +230,8 @@ export default function AppShell() {
       <MarkdownDocsDialog
         open={infoOpen}
         onClose={() => setInfoOpen(false)}
-        title="System Info"
-        markdown={infoMarkdown}
+        title={t('app.systemInfo')}
+        markdown={locale === 'hu' ? infoMarkdownHu : infoMarkdown}
       />
     </Box>
   );

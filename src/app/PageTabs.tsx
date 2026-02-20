@@ -13,8 +13,10 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { useProjectStore } from '../store/useProjectStore';
+import { useT } from '../i18n';
 
 export default function PageTabs() {
+  const t = useT();
   const pages = useProjectStore(s => s.project.pages);
   const activePageId = useProjectStore(s => s.activePageId);
   const setActivePage = useProjectStore(s => s.setActivePage);
@@ -39,7 +41,7 @@ export default function PageTabs() {
 
   const handleRenameCurrent = () => {
     if (!activePage) return;
-    const next = window.prompt('Rename canvas', activePage.name);
+    const next = window.prompt(t('pages.renamePrompt'), activePage.name);
     if (typeof next === 'string' && next.trim()) {
       renamePage(activePage.id, next.trim());
     }
@@ -71,12 +73,12 @@ export default function PageTabs() {
           '& .MuiSvgIcon-root': { color: '#fff' },
         }}
       >
-        <InputLabel id="canvas-select-label">Canvas</InputLabel>
+        <InputLabel id="canvas-select-label">{t('pages.canvas')}</InputLabel>
         <Select
           labelId="canvas-select-label"
           value={activePageId}
           onChange={handleSelectChange}
-          label="Canvas"
+          label={t('pages.canvas')}
           MenuProps={{ PaperProps: { sx: { maxHeight: 320 } } }}
         >
           {pages.map(page => (
@@ -87,13 +89,13 @@ export default function PageTabs() {
         </Select>
       </FormControl>
 
-      <Tooltip title="New canvas">
+      <Tooltip title={t('pages.newCanvas')}>
         <IconButton size="small" onClick={() => addPage()} sx={{ color: 'inherit' }}>
           <AddIcon fontSize="small" />
         </IconButton>
       </Tooltip>
 
-      <Tooltip title="Canvas actions">
+      <Tooltip title={t('pages.canvasActions')}>
         <IconButton size="small" onClick={handleOpenMenu} sx={{ color: 'inherit' }}>
           <MoreVertIcon fontSize="small" />
         </IconButton>
@@ -101,10 +103,10 @@ export default function PageTabs() {
 
       <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={handleCloseMenu}>
         <MenuItem onClick={handleRenameCurrent} disabled={!activePage}>
-          Rename current
+          {t('pages.renameCurrent')}
         </MenuItem>
         <MenuItem onClick={handleDeleteCurrent} disabled={pages.length <= 1}>
-          Delete current
+          {t('pages.deleteCurrent')}
         </MenuItem>
       </Menu>
     </Box>

@@ -5,6 +5,7 @@ import {
 } from '@mui/material';
 import { useProjectStore } from '../store/useProjectStore';
 import type { EdgeType, FlowDirection } from '../model/types';
+import { useT } from '../i18n';
 
 interface Props {
   open: boolean;
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export default function SettingsDialog({ open, onClose }: Props) {
+  const t = useT();
   const project = useProjectStore(s => s.project);
   const setProjectName = useProjectStore(s => s.setProjectName);
   const setProjectDescription = useProjectStore(s => s.setProjectDescription);
@@ -19,19 +21,19 @@ export default function SettingsDialog({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Project Settings</DialogTitle>
+      <DialogTitle>{t('settings.title')}</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1 }}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Project</Typography>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{t('settings.projectSection')}</Typography>
           <TextField
-            label="Project Name"
+            label={t('settings.projectName')}
             value={project.project.name}
             onChange={e => setProjectName(e.target.value)}
             size="small"
             fullWidth
           />
           <TextField
-            label="Description"
+            label={t('settings.description')}
             value={project.project.description}
             onChange={e => setProjectDescription(e.target.value)}
             size="small"
@@ -41,19 +43,19 @@ export default function SettingsDialog({ open, onClose }: Props) {
           />
 
           <Divider />
-          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>Flow</Typography>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{t('settings.flowSection')}</Typography>
 
           <TextField
-            label="Edge Type"
+            label={t('settings.edgeType')}
             value={project.ui.edgeType}
             onChange={e => setUI({ edgeType: e.target.value as EdgeType })}
             size="small"
             fullWidth
             select
           >
-            <MenuItem value="straight">Straight</MenuItem>
-            <MenuItem value="smoothstep">Smooth Step</MenuItem>
-            <MenuItem value="bezier">Bezier</MenuItem>
+            <MenuItem value="straight">{t('settings.straight')}</MenuItem>
+            <MenuItem value="smoothstep">{t('settings.smoothStep')}</MenuItem>
+            <MenuItem value="bezier">{t('settings.bezier')}</MenuItem>
           </TextField>
 
           <FormControlLabel
@@ -63,7 +65,7 @@ export default function SettingsDialog({ open, onClose }: Props) {
                 onChange={e => setUI({ edgeDashed: e.target.checked })}
               />
             )}
-            label="Dashed connection lines"
+            label={t('settings.dashedLines')}
           />
 
           <FormControlLabel
@@ -73,7 +75,7 @@ export default function SettingsDialog({ open, onClose }: Props) {
                 onChange={e => setUI({ hideEdgeLabels: e.target.checked })}
               />
             )}
-            label="Hide all labels"
+            label={t('settings.hideAllLabels')}
           />
 
           <FormControlLabel
@@ -83,11 +85,11 @@ export default function SettingsDialog({ open, onClose }: Props) {
                 onChange={e => setUI({ showMiniMap: e.target.checked })}
               />
             )}
-            label="Show mini map"
+            label={t('settings.showMiniMap')}
           />
 
           <Divider />
-          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>PDF Export</Typography>
+          <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{t('settings.pdfSection')}</Typography>
 
           <FormControlLabel
             control={(
@@ -96,26 +98,26 @@ export default function SettingsDialog({ open, onClose }: Props) {
                 onChange={e => setUI({ pdfIncludeEdgeLabels: e.target.checked })}
               />
             )}
-            label="Include edge labels in PDF"
+            label={t('settings.pdfIncludeEdgeLabels')}
           />
 
           <Divider />
           <TextField
-            label="Flow Direction"
+            label={t('settings.flowDirection')}
             value={project.ui.direction}
             onChange={e => setUI({ direction: e.target.value as FlowDirection })}
             size="small"
             fullWidth
             select
           >
-            <MenuItem value="TOP_DOWN">Top to Down</MenuItem>
-            <MenuItem value="LEFT_RIGHT">Left to Right</MenuItem>
-            <MenuItem value="RIGHT_LEFT">Right to Left</MenuItem>
+            <MenuItem value="TOP_DOWN">{t('settings.topDown')}</MenuItem>
+            <MenuItem value="LEFT_RIGHT">{t('settings.leftRight')}</MenuItem>
+            <MenuItem value="RIGHT_LEFT">{t('settings.rightLeft')}</MenuItem>
           </TextField>
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Close</Button>
+        <Button onClick={onClose}>{t('settings.close')}</Button>
       </DialogActions>
     </Dialog>
   );
