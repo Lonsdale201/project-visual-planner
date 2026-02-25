@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.1.1 - 2026-02-25
+
+### New
+- Added Brand Icon visual attachments with ring-style slots around host nodes (up to 6 per node).
+
+### Fix
+- Improved Brand Icon slot distribution to render as a true circular ring and reduced overlap issues.
+
 ## 2.1.0 - 2026-02-20
 
 ### New

@@ -806,11 +806,14 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
   const showFloatingTypeBadge = !isOverview && !(isBusinessFlow && kind === 'comment');
   const attachedCommentCount = Math.max(0, toNumber(data.attachedCommentCount, 0));
   const attachedCodeCount = Math.max(0, toNumber(data.attachedCodeCount, 0));
+  const attachedBrandCount = Math.max(0, toNumber(data.attachedBrandCount, 0));
+  const isBrandAttached = Boolean(toStr(data.attachedTo));
   const attachedCommentsExpanded = Boolean(data.attachedCommentsExpanded);
   const hasAttachedCommentBadge = kind !== 'comment' && attachedCommentCount > 0;
   const hasAttachedCodeBadge = kind !== 'code' && attachedCodeCount > 0;
   const hasAttachedBadges = hasAttachedCommentBadge || hasAttachedCodeBadge;
   const isAttachCandidate = Boolean(data.__attachCandidate);
+  const isBrandAttachCandidate = Boolean(data.__brandAttachCandidate);
   const overviewStats = kind === 'overview' && !isOverviewDisabledInBusiness ? collectOverviewStats(allPages) : null;
   const overviewMilestonesExpanded = isOverview ? Boolean(data.overviewMilestonesExpanded) : false;
   const overviewStacksShowLabels = isOverview ? Boolean(data.overviewStacksShowLabels) : false;
@@ -884,20 +887,24 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
           <IntegrationPresetIcon preset={fallbackPreset} size={52} plain />
         </Box>
 
-        <Handle
-          className="kf-handle kf-handle-target"
-          type="target"
-          position={handlePos.input}
-          id="in-0"
-          style={getDistributedHandleStyle(handlePos.input, 0, 1, colors.border)}
-        />
-        <Handle
-          className="kf-handle kf-handle-source"
-          type="source"
-          position={handlePos.output}
-          id="out-0"
-          style={getDistributedHandleStyle(handlePos.output, 0, 1, colors.border)}
-        />
+        {!isBrandAttached && (
+          <>
+            <Handle
+              className="kf-handle kf-handle-target"
+              type="target"
+              position={handlePos.input}
+              id="in-0"
+              style={getDistributedHandleStyle(handlePos.input, 0, 1, colors.border)}
+            />
+            <Handle
+              className="kf-handle kf-handle-source"
+              type="source"
+              position={handlePos.output}
+              id="out-0"
+              style={getDistributedHandleStyle(handlePos.output, 0, 1, colors.border)}
+            />
+          </>
+        )}
       </>
     );
   }
@@ -993,6 +1000,27 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
     if (!hasAttachedBadges) return;
     updateNodeData(id, { showAttachedComments: !attachedCommentsExpanded });
   };
+  const BRAND_SLOT_SIZE = 88;
+  const BRAND_SLOT_GAP = 25;
+  const previewHostHeight = kind === 'code'
+    ? (codeExpanded ? 460 : 330)
+    : kind === 'service'
+      ? (serviceEndpoints.length > 0 ? 230 : 165)
+      : kind === 'database'
+        ? (hasDbSchemaInput ? 240 : 180)
+        : kind === 'milestone'
+          ? 170
+          : 170;
+  const brandSlotRadiusBase = BRAND_SLOT_GAP + (BRAND_SLOT_SIZE / 2);
+  const brandSlotRadiusX = (nodeWidth / 2) + brandSlotRadiusBase;
+  const brandSlotRadiusY = (previewHostHeight / 2) + brandSlotRadiusBase;
+  const brandAttachSlotOffsets = Array.from({ length: 6 }, (_, index) => {
+    const angle = (-Math.PI / 2) + ((Math.PI * 2 * index) / 6);
+    return {
+      dx: Math.round(brandSlotRadiusX * Math.cos(angle)),
+      dy: Math.round(brandSlotRadiusY * Math.sin(angle)),
+    };
+  });
 
   return (
     <>
@@ -1152,6 +1180,38 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                 '& .MuiChip-label': { px: 1, fontSize: 11, fontWeight: 700 },
               }}
             />
+          </Box>
+        )}
+
+        {isBrandAttachCandidate && kind !== 'overview' && (
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              zIndex: 4,
+            }}
+          >
+            {brandAttachSlotOffsets.map((slot, index) => {
+              const occupied = index < attachedBrandCount;
+              return (
+                <Box
+                  key={`brand-slot-${index}`}
+                  sx={{
+                    position: 'absolute',
+                    width: BRAND_SLOT_SIZE,
+                    height: BRAND_SLOT_SIZE,
+                    borderRadius: '50%',
+                    border: occupied ? '1.6px solid #9bb2dc' : '1.8px dashed #6d8ed9',
+                    bgcolor: occupied ? 'rgba(132, 162, 211, 0.18)' : 'rgba(78, 118, 205, 0.07)',
+                    boxShadow: occupied ? 'inset 0 0 0 2px rgba(255,255,255,0.65)' : 'none',
+                    left: '50%',
+                    top: '50%',
+                    transform: `translate(calc(-50% + ${slot.dx}px), calc(-50% + ${slot.dy}px))`,
+                  }}
+                />
+              );
+            })}
           </Box>
         )}
 

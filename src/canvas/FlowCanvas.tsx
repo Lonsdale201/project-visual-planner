@@ -206,6 +206,9 @@ function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 const COMMENT_ATTACH_RADIUS = 260;
+const BRAND_ATTACH_SLOT_COUNT = 6;
+const BRAND_ATTACH_SLOT_SIZE = 88;
+const BRAND_ATTACH_SLOT_GAP = 25;
 
 interface AttachNodeLike {
   id: string;
@@ -218,7 +221,7 @@ interface AttachNodeLike {
 
 const COMMENT_ATTACH_GAP = 28;
 const COMMENT_STACK_GAP = 20;
-const ATTACHABLE_NODE_TYPES = new Set<NodeKind>(['comment', 'code']);
+const ATTACHABLE_NODE_TYPES = new Set<NodeKind>(['comment', 'code', 'brand']);
 
 function isAttachableNodeType(type?: string): boolean {
   if (!type) return false;
@@ -233,6 +236,97 @@ function isAttachableNode(node: { type?: string; data?: Record<string, unknown> 
   if (!isAttachableNodeType(node.type)) return false;
   if (isStickyCommentNode(node.type, node.data)) return false;
   return true;
+}
+
+function getAttachedTo(node: { data?: Record<string, unknown> }): string {
+  return typeof node.data?.attachedTo === 'string' ? node.data.attachedTo : '';
+}
+
+function estimateAttachNodeWidth(node: AttachNodeLike): number {
+  if (typeof node.width === 'number' && node.width > 0) return node.width;
+  if (node.type === 'overview') return 540;
+  if (node.type === 'code') return 390;
+  if (node.type === 'brand') return 88;
+  return 340;
+}
+
+function estimateAttachNodeHeight(node: AttachNodeLike): number {
+  if (typeof node.height === 'number' && node.height > 0) return node.height;
+  if (node.type === 'overview') return 520;
+  if (node.type === 'code') return 330;
+  if (node.type === 'brand') return 88;
+  return 170;
+}
+
+function centerOfAttachNode(node: AttachNodeLike): { x: number; y: number } {
+  return {
+    x: node.position.x + (estimateAttachNodeWidth(node) / 2),
+    y: node.position.y + (estimateAttachNodeHeight(node) / 2),
+  };
+}
+
+function getBrandSlotCenters(hostNode: AttachNodeLike): Array<{ x: number; y: number }> {
+  const center = centerOfAttachNode(hostNode);
+  const radiusBase = BRAND_ATTACH_SLOT_GAP + (BRAND_ATTACH_SLOT_SIZE / 2);
+  const radiusX = (estimateAttachNodeWidth(hostNode) / 2) + radiusBase;
+  const radiusY = (estimateAttachNodeHeight(hostNode) / 2) + radiusBase;
+
+  return Array.from({ length: BRAND_ATTACH_SLOT_COUNT }, (_, index) => {
+    const angle = (-Math.PI / 2) + ((Math.PI * 2 * index) / BRAND_ATTACH_SLOT_COUNT);
+    return {
+      x: center.x + (radiusX * Math.cos(angle)),
+      y: center.y + (radiusY * Math.sin(angle)),
+    };
+  });
+}
+
+function canAttachNodeToTarget(draggedNode: AttachNodeLike, targetNode: AttachNodeLike): boolean {
+  if (!isAttachableNode(draggedNode)) return false;
+  if (draggedNode.id === targetNode.id) return false;
+
+  if (draggedNode.type === 'brand') {
+    return targetNode.type !== 'overview' && targetNode.type !== 'brand';
+  }
+
+  return targetNode.type !== 'comment';
+}
+
+function findBrandAttachTargetId(draggedNode: AttachNodeLike, canvasNodes: AttachNodeLike[]): string | null {
+  if (draggedNode.type !== 'brand') return null;
+
+  const attachedBrandCounts = new Map<string, number>();
+  canvasNodes.forEach(node => {
+    if (node.type !== 'brand') return;
+    const attachedTo = getAttachedTo(node);
+    if (!attachedTo) return;
+    attachedBrandCounts.set(attachedTo, (attachedBrandCounts.get(attachedTo) ?? 0) + 1);
+  });
+
+  const draggedCenter = centerOfAttachNode(draggedNode);
+  const draggedAttachedTo = getAttachedTo(draggedNode);
+  let bestTargetId: string | null = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  for (const node of canvasNodes) {
+    if (!canAttachNodeToTarget(draggedNode, node)) continue;
+
+    const rawCount = attachedBrandCounts.get(node.id) ?? 0;
+    const effectiveCount = draggedAttachedTo === node.id ? Math.max(0, rawCount - 1) : rawCount;
+    if (effectiveCount >= BRAND_ATTACH_SLOT_COUNT) continue;
+
+    const hostCenter = centerOfAttachNode(node);
+    const dx = hostCenter.x - draggedCenter.x;
+    const dy = hostCenter.y - draggedCenter.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < bestDistance) {
+      bestDistance = dist;
+      bestTargetId = node.id;
+    }
+  }
+
+  if (!bestTargetId) return null;
+  if (bestDistance > COMMENT_ATTACH_RADIUS) return null;
+  return bestTargetId;
 }
 
 function estimateNodeWidth(node: ProjectNode): number {
@@ -277,18 +371,17 @@ function estimateNodeHeight(node: ProjectNode): number {
 function findAttachTargetId(draggedNode: AttachNodeLike, canvasNodes: AttachNodeLike[]): string | null {
   if (!isAttachableNode(draggedNode)) return null;
 
-  const centerOf = (node: AttachNodeLike) => ({
-    x: node.position.x + ((node.width ?? 320) / 2),
-    y: node.position.y + ((node.height ?? 170) / 2),
-  });
+  if (draggedNode.type === 'brand') {
+    return findBrandAttachTargetId(draggedNode, canvasNodes);
+  }
 
-  const draggedCenter = centerOf(draggedNode);
+  const draggedCenter = centerOfAttachNode(draggedNode);
   let bestId: string | null = null;
   let bestDistance = Number.POSITIVE_INFINITY;
 
   for (const node of canvasNodes) {
-    if (node.id === draggedNode.id || node.type === 'comment') continue;
-    const c = centerOf(node);
+    if (!canAttachNodeToTarget(draggedNode, node)) continue;
+    const c = centerOfAttachNode(node);
     const dx = c.x - draggedCenter.x;
     const dy = c.y - draggedCenter.y;
     const dist = Math.hypot(dx, dy);
@@ -374,6 +467,7 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
   const pendingSelectedNodeIdsRef = useRef<Set<string> | null>(null);
   const attachPreviewFrameRef = useRef<number | null>(null);
   const pendingAttachPreviewIdRef = useRef<string | null>(null);
+  const pendingAttachPreviewKindRef = useRef<NodeKind | null>(null);
   const canvasWrapperRef = useRef<HTMLDivElement | null>(null);
   const navDragRef = useRef<{ dragging: boolean; startX: number; startY: number; originX: number; originY: number } | null>(null);
   const stickyDragRef = useRef<StickyDragState | null>(null);
@@ -393,6 +487,7 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [nodeContextMenu, setNodeContextMenu] = useState<NodeContextMenuState | null>(null);
   const [attachPreviewTargetId, setAttachPreviewTargetId] = useState<string | null>(null);
+  const [attachPreviewKind, setAttachPreviewKind] = useState<NodeKind | null>(null);
   const [navigatorPos, setNavigatorPos] = useState({ x: 16, y: 16 });
   const [expandedNavIds, setExpandedNavIds] = useState<Set<string>>(new Set());
   const [hiddenNodeIds, setHiddenNodeIds] = useState<Set<string>>(new Set());
@@ -462,15 +557,16 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
 
     const attachedCommentCounts = new Map<string, number>();
     storeNodes.forEach(node => {
+      if (node.type !== 'comment') return;
       if (!isAttachableNode(node)) return;
-      const attachedTo = typeof node.data.attachedTo === 'string' ? node.data.attachedTo : '';
+      const attachedTo = getAttachedTo(node);
       if (!attachedTo || !nodeById.has(attachedTo)) return;
       attachedCommentCounts.set(attachedTo, (attachedCommentCounts.get(attachedTo) ?? 0) + 1);
     });
 
     const treeCandidateNodes = storeNodes.filter(node => {
       if (!isAttachableNode(node)) return true;
-      const attachedTo = typeof node.data.attachedTo === 'string' ? node.data.attachedTo : '';
+      const attachedTo = getAttachedTo(node);
       return !attachedTo || !nodeById.has(attachedTo);
     });
     const treeIds = new Set(treeCandidateNodes.map(node => node.id));
@@ -512,7 +608,7 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
     const attachedCommentsByTarget = new Map<string, string[]>();
     storeNodes.forEach(node => {
       if (!isAttachableNode(node)) return;
-      const attachedTo = typeof node.data.attachedTo === 'string' ? node.data.attachedTo : '';
+      const attachedTo = getAttachedTo(node);
       if (!attachedTo) return;
       const list = attachedCommentsByTarget.get(attachedTo) ?? [];
       list.push(node.id);
@@ -603,7 +699,7 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
     storeNodes.forEach(node => {
       if (!visibleNodeIds.has(node.id)) return;
       if (!isAttachableNode(node)) return;
-      const attachedTo = typeof node.data.attachedTo === 'string' ? node.data.attachedTo : '';
+      const attachedTo = getAttachedTo(node);
       if (!attachedTo || !nodeById.has(attachedTo) || !visibleNodeIds.has(attachedTo)) return;
       const list = attachedByTarget.get(attachedTo) ?? [];
       list.push(node);
@@ -612,9 +708,12 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
 
     const hasValidAttachTarget = (node: ProjectNode): boolean => {
       if (!isAttachableNode(node)) return false;
-      const attachedTo = typeof node.data.attachedTo === 'string' ? node.data.attachedTo : '';
+      const attachedTo = getAttachedTo(node);
       if (!attachedTo || attachedTo === node.id) return false;
-      return nodeById.has(attachedTo) && visibleNodeIds.has(attachedTo);
+      const target = nodeById.get(attachedTo);
+      if (!target || !visibleNodeIds.has(attachedTo)) return false;
+      if (!canAttachNodeToTarget(node as AttachNodeLike, target as AttachNodeLike)) return false;
+      return true;
     };
 
     const renderNodeRecursive = (node: ProjectNode, positionOverride?: { x: number; y: number }) => {
@@ -627,19 +726,25 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
       }
 
       const attachedChildren = attachedByTarget.get(node.id) ?? [];
-      const attachedCount = attachedChildren.length;
-      const attachedCommentCount = attachedChildren.filter(child => child.type === 'comment').length;
-      const attachedCodeCount = attachedChildren.filter(child => child.type === 'code').length;
+      const attachedBrandChildren = attachedChildren
+        .filter(child => child.type === 'brand')
+        .sort((a, b) => a.id.localeCompare(b.id))
+        .slice(0, BRAND_ATTACH_SLOT_COUNT);
+      const attachedCommentCodeChildren = attachedChildren.filter(child => child.type === 'comment' || child.type === 'code');
+      const attachedCommentCount = attachedCommentCodeChildren.filter(child => child.type === 'comment').length;
+      const attachedCodeCount = attachedCommentCodeChildren.filter(child => child.type === 'code').length;
       const projectedNode: ProjectNode = {
         ...node,
         position: positionOverride ? { ...positionOverride } : { ...node.position },
         data: {
           ...node.data,
-          attachedNodeCount: attachedCount,
+          attachedNodeCount: attachedCommentCodeChildren.length,
           attachedCommentCount,
           attachedCodeCount,
+          attachedBrandCount: attachedBrandChildren.length,
           attachedCommentsExpanded: Boolean(node.data.showAttachedComments),
-          __attachCandidate: node.id === attachPreviewTargetId,
+          __attachCandidate: node.id === attachPreviewTargetId && attachPreviewKind !== 'brand',
+          __brandAttachCandidate: node.id === attachPreviewTargetId && attachPreviewKind === 'brand',
           __dimmed: dimmedNodeIds.has(node.id),
         },
       };
@@ -647,8 +752,21 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
       renderedNodes.push(projectedNode);
       renderedIds.add(projectedNode.id);
 
+      if (attachedBrandChildren.length > 0) {
+        const slotCenters = getBrandSlotCenters(projectedNode);
+        attachedBrandChildren.forEach((childNode, index) => {
+          const center = slotCenters[index];
+          const childWidth = estimateNodeWidth(childNode);
+          const childHeight = estimateNodeHeight(childNode);
+          renderNodeRecursive(childNode, {
+            x: center.x - (childWidth / 2),
+            y: center.y - (childHeight / 2),
+          });
+        });
+      }
+
       if (!Boolean(node.data.showAttachedComments)) return;
-      const children = attachedByTarget.get(node.id) ?? [];
+      const children = attachedCommentCodeChildren;
       if (!children.length) return;
 
       const childHeights = children.map(child => estimateNodeHeight(child));
@@ -689,7 +807,7 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
     const renderedEdges = storeEdges.filter(edge => renderedIds.has(edge.source) && renderedIds.has(edge.target));
 
     return { displayNodes: renderedNodes, displayEdges: renderedEdges, stickyOverlayNodes: stickyNodes };
-  }, [storeNodes, storeEdges, flowDirection, attachPreviewTargetId, visibleNodeIds, dimmedNodeIds]);
+  }, [storeNodes, storeEdges, flowDirection, attachPreviewTargetId, attachPreviewKind, visibleNodeIds, dimmedNodeIds]);
 
   // Sync store -> local while preserving React Flow internals.
   useEffect(() => {
@@ -1031,14 +1149,18 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
   }, []);
 
   const onNodeDrag = useCallback((_: React.MouseEvent, draggedNode: Node) => {
-    const nextTargetId = isAttachableNode(draggedNode as AttachNodeLike) ? findAttachTargetId(draggedNode as AttachNodeLike, nodes as AttachNodeLike[]) : null;
+    const dragKind = isAttachableNode(draggedNode as AttachNodeLike) ? (draggedNode.type as NodeKind) : null;
+    const nextTargetId = dragKind ? findAttachTargetId(draggedNode as AttachNodeLike, nodes as AttachNodeLike[]) : null;
     pendingAttachPreviewIdRef.current = nextTargetId;
+    pendingAttachPreviewKindRef.current = dragKind;
 
     if (attachPreviewFrameRef.current !== null) return;
     attachPreviewFrameRef.current = requestAnimationFrame(() => {
       attachPreviewFrameRef.current = null;
       const next = pendingAttachPreviewIdRef.current;
+      const nextKind = pendingAttachPreviewKindRef.current;
       setAttachPreviewTargetId(current => (current === next ? current : next));
+      setAttachPreviewKind(current => (current === nextKind ? current : nextKind));
     });
   }, [nodes]);
 
@@ -1084,6 +1206,8 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
 
     state.replacePageGraph(state.activePageId, nextNodes, activePage.edges);
     setAttachPreviewTargetId(null);
+    setAttachPreviewKind(null);
+    pendingAttachPreviewKindRef.current = null;
   }, [attachPreviewTargetId, nodes]);
 
   const onConnect = useCallback((connection: Connection) => {
@@ -1183,6 +1307,7 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
     s.setSelectedEdge(null);
     setNodeContextMenu(null);
     setAttachPreviewTargetId(null);
+    setAttachPreviewKind(null);
   }, []);
 
   // Keyboard delete (when canvas wrapper has focus)
