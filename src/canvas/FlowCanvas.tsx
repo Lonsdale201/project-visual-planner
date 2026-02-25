@@ -209,7 +209,9 @@ const COMMENT_ATTACH_RADIUS = 260;
 const BRAND_ATTACH_SLOT_COUNT = 6;
 const BRAND_ATTACH_SLOT_SIZE = 88;
 const BRAND_ATTACH_SLOT_GAP = 25;
+const BRAND_ATTACH_SLOT_BOTTOM_CLEARANCE = 6;
 const BRAND_ATTACH_SLOT_SNAP_RADIUS = BRAND_ATTACH_SLOT_SIZE;
+const BRAND_ATTACH_HOST_HOVER_MARGIN = 46;
 const BRAND_ATTACH_SLOT_ANGLES = Array.from(
   { length: BRAND_ATTACH_SLOT_COUNT },
   (_, index) => (-Math.PI / 2) + ((Math.PI * 2 * index) / BRAND_ATTACH_SLOT_COUNT),
@@ -247,6 +249,12 @@ function getAttachedTo(node: { data?: Record<string, unknown> }): string {
   return typeof node.data?.attachedTo === 'string' ? node.data.attachedTo : '';
 }
 
+function estimatePersonaAttachHeight(data?: Record<string, unknown>): number {
+  const painPoints = typeof data?.painPoints === 'string' ? data.painPoints.trim() : '';
+  const painExtraLines = Math.max(0, Math.ceil(painPoints.length / 48) - 3);
+  return Math.min(460, 320 + (painExtraLines * 18));
+}
+
 function estimateAttachNodeWidth(node: AttachNodeLike): number {
   if (typeof node.width === 'number' && node.width > 0) return node.width;
   if (node.type === 'overview') return 540;
@@ -259,6 +267,7 @@ function estimateAttachNodeHeight(node: AttachNodeLike): number {
   if (typeof node.height === 'number' && node.height > 0) return node.height;
   if (node.type === 'overview') return 520;
   if (node.type === 'code') return 330;
+  if (node.type === 'persona') return estimatePersonaAttachHeight(node.data);
   if (node.type === 'brand') return 88;
   return 170;
 }
@@ -280,8 +289,11 @@ function getBrandSlotOffsets(hostWidth: number, hostHeight: number): Array<{ dx:
     const sin = Math.sin(angle);
     const absCos = Math.abs(cos);
     const absSin = Math.abs(sin);
+    const lowerHemisphereExtra = sin > 0.92 ? BRAND_ATTACH_SLOT_BOTTOM_CLEARANCE : 0;
     const distanceToVerticalEdge = absCos > 1e-6 ? (halfWidth + slotPadding) / absCos : Number.POSITIVE_INFINITY;
-    const distanceToHorizontalEdge = absSin > 1e-6 ? (halfHeight + slotPadding) / absSin : Number.POSITIVE_INFINITY;
+    const distanceToHorizontalEdge = absSin > 1e-6
+      ? (halfHeight + slotPadding + lowerHemisphereExtra) / absSin
+      : Number.POSITIVE_INFINITY;
     const radius = Math.min(distanceToVerticalEdge, distanceToHorizontalEdge);
     return {
       dx: radius * cos,
@@ -297,6 +309,22 @@ function getBrandSlotCenters(hostNode: AttachNodeLike): Array<{ x: number; y: nu
     x: center.x + offset.dx,
     y: center.y + offset.dy,
   }));
+}
+
+function pointToExpandedNodeRectDistance(
+  point: { x: number; y: number },
+  node: AttachNodeLike,
+  margin: number,
+): number {
+  const width = estimateAttachNodeWidth(node);
+  const height = estimateAttachNodeHeight(node);
+  const left = node.position.x - margin;
+  const right = node.position.x + width + margin;
+  const top = node.position.y - margin;
+  const bottom = node.position.y + height + margin;
+  const dx = point.x < left ? (left - point.x) : point.x > right ? (point.x - right) : 0;
+  const dy = point.y < top ? (top - point.y) : point.y > bottom ? (point.y - bottom) : 0;
+  return Math.hypot(dx, dy);
 }
 
 function canAttachNodeToTarget(draggedNode: AttachNodeLike, targetNode: AttachNodeLike): boolean {
@@ -334,12 +362,14 @@ function findBrandAttachTargetId(draggedNode: AttachNodeLike, canvasNodes: Attac
     if (effectiveCount >= BRAND_ATTACH_SLOT_COUNT) continue;
 
     const slotCenters = getBrandSlotCenters(node);
-    const dist = slotCenters.reduce((minDistance, slot) => {
+    const slotDistance = slotCenters.reduce((minDistance, slot) => {
       const dx = slot.x - draggedCenter.x;
       const dy = slot.y - draggedCenter.y;
       const candidate = Math.hypot(dx, dy);
       return Math.min(minDistance, candidate);
     }, Number.POSITIVE_INFINITY);
+    const hostHoverDistance = pointToExpandedNodeRectDistance(draggedCenter, node, BRAND_ATTACH_HOST_HOVER_MARGIN);
+    const dist = Math.min(slotDistance, hostHoverDistance);
     if (dist < bestDistance) {
       bestDistance = dist;
       bestTargetId = node.id;
@@ -362,6 +392,7 @@ function estimateNodeHeight(node: ProjectNode): number {
   if (node.type === 'overview') return 520;
   if (node.type === 'milestone') return 170;
   if (node.type === 'integration') return 185;
+  if (node.type === 'persona') return estimatePersonaAttachHeight(node.data);
   if (node.type === 'brand') return 88;
   if (node.type === 'action') return 170;
 
@@ -516,6 +547,42 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
   const [hiddenNodeIds, setHiddenNodeIds] = useState<Set<string>>(new Set());
   const [focusNodeId, setFocusNodeId] = useState<string | null>(null);
   const [stickyDragPreviewById, setStickyDragPreviewById] = useState<Record<string, { x: number; y: number }>>({});
+  const liveNodeSizeByIdRef = useRef<Map<string, { width: number; height: number }>>(new Map());
+  const [liveNodeSizeTick, setLiveNodeSizeTick] = useState(0);
+
+  useEffect(() => {
+    const next = new Map<string, { width: number; height: number }>();
+    nodes.forEach(node => {
+      if (
+        typeof node.width === 'number'
+        && node.width > 0
+        && typeof node.height === 'number'
+        && node.height > 0
+      ) {
+        next.set(node.id, {
+          width: Math.round(node.width),
+          height: Math.round(node.height),
+        });
+      }
+    });
+
+    const current = liveNodeSizeByIdRef.current;
+    let changed = current.size !== next.size;
+    if (!changed) {
+      for (const [id, size] of next.entries()) {
+        const existing = current.get(id);
+        if (!existing || existing.width !== size.width || existing.height !== size.height) {
+          changed = true;
+          break;
+        }
+      }
+    }
+
+    if (changed) {
+      liveNodeSizeByIdRef.current = next;
+      setLiveNodeSizeTick(version => version + 1);
+    }
+  }, [nodes]);
 
   useEffect(() => {
     const viewport = reactFlowRef.current?.getViewport() ?? pageViewport;
@@ -718,6 +785,17 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
     const renderedNodes: ProjectNode[] = [];
     const renderedIds = new Set<string>();
     const stickyNodes: ProjectNode[] = [];
+    const liveNodeSizeById = liveNodeSizeByIdRef.current;
+
+    const getNodeWidth = (node: ProjectNode): number => {
+      const live = liveNodeSizeById.get(node.id);
+      return live?.width ?? estimateNodeWidth(node);
+    };
+
+    const getNodeHeight = (node: ProjectNode): number => {
+      const live = liveNodeSizeById.get(node.id);
+      return live?.height ?? estimateNodeHeight(node);
+    };
 
     storeNodes.forEach(node => {
       if (!visibleNodeIds.has(node.id)) return;
@@ -756,6 +834,8 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
       const attachedCommentCodeChildren = attachedChildren.filter(child => child.type === 'comment' || child.type === 'code');
       const attachedCommentCount = attachedCommentCodeChildren.filter(child => child.type === 'comment').length;
       const attachedCodeCount = attachedCommentCodeChildren.filter(child => child.type === 'code').length;
+      const hostWidth = getNodeWidth(node);
+      const hostHeight = getNodeHeight(node);
       const projectedNode: ProjectNode = {
         ...node,
         position: positionOverride ? { ...positionOverride } : { ...node.position },
@@ -768,6 +848,8 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
           attachedCommentsExpanded: Boolean(node.data.showAttachedComments),
           __attachCandidate: node.id === attachPreviewTargetId && attachPreviewKind !== 'brand',
           __brandAttachCandidate: node.id === attachPreviewTargetId && attachPreviewKind === 'brand',
+          __attachHostWidth: hostWidth,
+          __attachHostHeight: hostHeight,
           __dimmed: dimmedNodeIds.has(node.id),
         },
       };
@@ -776,11 +858,18 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
       renderedIds.add(projectedNode.id);
 
       if (attachedBrandChildren.length > 0) {
-        const slotCenters = getBrandSlotCenters(projectedNode);
+        const slotCenters = getBrandSlotCenters({
+          id: projectedNode.id,
+          type: projectedNode.type,
+          data: projectedNode.data as Record<string, unknown>,
+          position: projectedNode.position,
+          width: hostWidth,
+          height: hostHeight,
+        });
         attachedBrandChildren.forEach((childNode, index) => {
           const center = slotCenters[index];
-          const childWidth = estimateNodeWidth(childNode);
-          const childHeight = estimateNodeHeight(childNode);
+          const childWidth = getNodeWidth(childNode);
+          const childHeight = getNodeHeight(childNode);
           renderNodeRecursive(childNode, {
             x: center.x - (childWidth / 2),
             y: center.y - (childHeight / 2),
@@ -792,19 +881,19 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
       const children = attachedCommentCodeChildren;
       if (!children.length) return;
 
-      const childHeights = children.map(child => estimateNodeHeight(child));
+      const childHeights = children.map(child => getNodeHeight(child));
       const totalChildrenHeight = childHeights.reduce((sum, h) => sum + h, 0);
       const totalGapsHeight = Math.max(0, children.length - 1) * COMMENT_STACK_GAP;
       const totalStackHeight = totalChildrenHeight + totalGapsHeight;
-      const parentCenterY = projectedNode.position.y + (estimateNodeHeight(projectedNode) / 2);
+      const parentCenterY = projectedNode.position.y + (hostHeight / 2);
       const startY = parentCenterY - (totalStackHeight / 2);
-      const parentWidth = estimateNodeWidth(projectedNode);
+      const parentWidth = hostWidth;
 
       children.forEach((childNode, index) => {
         const offsetBefore = childHeights
           .slice(0, index)
           .reduce((sum, h) => sum + h + COMMENT_STACK_GAP, 0);
-        const childWidth = estimateNodeWidth(childNode);
+        const childWidth = getNodeWidth(childNode);
         const childX = flowDirection === 'RIGHT_LEFT'
           ? projectedNode.position.x - childWidth - COMMENT_ATTACH_GAP
           : projectedNode.position.x + parentWidth + COMMENT_ATTACH_GAP;
@@ -830,7 +919,7 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
     const renderedEdges = storeEdges.filter(edge => renderedIds.has(edge.source) && renderedIds.has(edge.target));
 
     return { displayNodes: renderedNodes, displayEdges: renderedEdges, stickyOverlayNodes: stickyNodes };
-  }, [storeNodes, storeEdges, flowDirection, attachPreviewTargetId, attachPreviewKind, visibleNodeIds, dimmedNodeIds]);
+  }, [storeNodes, storeEdges, flowDirection, attachPreviewTargetId, attachPreviewKind, visibleNodeIds, dimmedNodeIds, liveNodeSizeTick]);
 
   // Sync store -> local while preserving React Flow internals.
   useEffect(() => {

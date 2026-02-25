@@ -105,6 +105,7 @@ interface FlowNodeProps {
 }
 
 const BRAND_SLOT_COUNT = 6;
+const BRAND_SLOT_BOTTOM_CLEARANCE = 6;
 const BRAND_SLOT_ANGLES = Array.from(
   { length: BRAND_SLOT_COUNT },
   (_, index) => (-Math.PI / 2) + ((Math.PI * 2 * index) / BRAND_SLOT_COUNT),
@@ -199,8 +200,11 @@ function getBrandAttachSlotOffsets(
     const sin = Math.sin(angle);
     const absCos = Math.abs(cos);
     const absSin = Math.abs(sin);
+    const lowerHemisphereExtra = sin > 0.92 ? BRAND_SLOT_BOTTOM_CLEARANCE : 0;
     const distanceToVerticalEdge = absCos > 1e-6 ? (halfWidth + slotPadding) / absCos : Number.POSITIVE_INFINITY;
-    const distanceToHorizontalEdge = absSin > 1e-6 ? (halfHeight + slotPadding) / absSin : Number.POSITIVE_INFINITY;
+    const distanceToHorizontalEdge = absSin > 1e-6
+      ? (halfHeight + slotPadding + lowerHemisphereExtra) / absSin
+      : Number.POSITIVE_INFINITY;
     const radius = Math.min(distanceToVerticalEdge, distanceToHorizontalEdge);
 
     return {
@@ -208,6 +212,12 @@ function getBrandAttachSlotOffsets(
       dy: Math.round(radius * sin),
     };
   });
+}
+
+function estimatePersonaPreviewHeight(data: Record<string, unknown>): number {
+  const painPoints = toStr(data.painPoints).trim();
+  const painExtraLines = Math.max(0, Math.ceil(painPoints.length / 48) - 3);
+  return Math.min(460, 320 + (painExtraLines * 18));
 }
 
 function toNumber(value: unknown, fallback = 0): number {
@@ -891,7 +901,11 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
       ...(overviewStats?.infraProviders ?? []),
     ])
     : [];
-  const nodeWidth = isOverview ? 540 : isCode ? 390 : 340;
+  const fallbackNodeWidth = isOverview ? 540 : isCode ? 390 : 340;
+  const nodeWidth = Math.max(
+    1,
+    Math.round(toNumber(data.__attachHostWidth, fallbackNodeWidth)),
+  );
   const inputHandleCount = kind === 'router'
     ? clampHandleCount(data.inputCount, def.inputHandles)
     : def.inputHandles;
@@ -1068,15 +1082,21 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
   };
   const BRAND_SLOT_SIZE = 88;
   const BRAND_SLOT_GAP = 25;
-  const previewHostHeight = kind === 'code'
+  const fallbackPreviewHostHeight = kind === 'code'
     ? (codeExpanded ? 460 : 330)
     : kind === 'service'
       ? (serviceEndpoints.length > 0 ? 230 : 165)
       : kind === 'database'
         ? (hasDbSchemaInput ? 240 : 180)
+        : kind === 'persona'
+          ? estimatePersonaPreviewHeight(data)
         : kind === 'milestone'
           ? 170
           : 170;
+  const previewHostHeight = Math.max(
+    1,
+    Math.round(toNumber(data.__attachHostHeight, fallbackPreviewHostHeight)),
+  );
   const brandAttachSlotOffsets = getBrandAttachSlotOffsets(nodeWidth, previewHostHeight, BRAND_SLOT_SIZE, BRAND_SLOT_GAP);
 
   return (
