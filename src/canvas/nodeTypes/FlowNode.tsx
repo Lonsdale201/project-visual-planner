@@ -104,6 +104,12 @@ interface FlowNodeProps {
   selected?: boolean;
 }
 
+const BRAND_SLOT_COUNT = 6;
+const BRAND_SLOT_ANGLES = Array.from(
+  { length: BRAND_SLOT_COUNT },
+  (_, index) => (-Math.PI / 2) + ((Math.PI * 2 * index) / BRAND_SLOT_COUNT),
+);
+
 function selectActivePage(s: { project: { pages: Page[] }; activePageId: string }): Page {
   return s.project.pages.find(p => p.id === s.activePageId) ?? s.project.pages[0];
 }
@@ -121,6 +127,35 @@ function getHandlePositions(direction: FlowDirection): { input: Position; output
 
 function toStr(value: unknown): string {
   return typeof value === 'string' ? value : '';
+}
+
+const enumTranslationKeyByValue: Record<string, TranslationKey> = {
+  low: 'enums.low',
+  medium: 'enums.medium',
+  high: 'enums.high',
+  critical: 'enums.critical',
+  must: 'enums.must',
+  should: 'enums.should',
+  could: 'enums.could',
+  wont: 'enums.wont',
+  planned: 'enums.planned',
+  'in-progress': 'enums.inProgress',
+  done: 'enums.done',
+  open: 'enums.open',
+  mitigated: 'enums.mitigated',
+  accepted: 'enums.accepted',
+  inbound: 'enums.inbound',
+  outbound: 'enums.outbound',
+  both: 'enums.both',
+  external: 'enums.external',
+  internal: 'enums.internal',
+};
+
+function translateEnumValue(value: unknown, t: TFunction): string {
+  const normalized = toStr(value).trim().toLowerCase();
+  if (!normalized) return '';
+  const key = enumTranslationKeyByValue[normalized];
+  return key ? t(key) : normalized;
 }
 
 function toTags(value: unknown): string[] {
@@ -147,6 +182,32 @@ function uniqueValues(values: string[]): string[] {
   }
 
   return out.sort((a, b) => a.localeCompare(b));
+}
+
+function getBrandAttachSlotOffsets(
+  hostWidth: number,
+  hostHeight: number,
+  slotSize: number,
+  slotGap: number,
+): Array<{ dx: number; dy: number }> {
+  const halfWidth = hostWidth / 2;
+  const halfHeight = hostHeight / 2;
+  const slotPadding = slotGap + (slotSize / 2);
+
+  return BRAND_SLOT_ANGLES.map(angle => {
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const absCos = Math.abs(cos);
+    const absSin = Math.abs(sin);
+    const distanceToVerticalEdge = absCos > 1e-6 ? (halfWidth + slotPadding) / absCos : Number.POSITIVE_INFINITY;
+    const distanceToHorizontalEdge = absSin > 1e-6 ? (halfHeight + slotPadding) / absSin : Number.POSITIVE_INFINITY;
+    const radius = Math.min(distanceToVerticalEdge, distanceToHorizontalEdge);
+
+    return {
+      dx: Math.round(radius * cos),
+      dy: Math.round(radius * sin),
+    };
+  });
 }
 
 function toNumber(value: unknown, fallback = 0): number {
@@ -498,9 +559,11 @@ function getMetaLabel(kind: NodeKind, data: Record<string, unknown>, t: TFunctio
     case 'action':
       return '';
     case 'persona':
-      return toStr(data.priority) ? t('flowNode.priorityMeta', { priority: toStr(data.priority) }) : t('nodes.persona');
+      return toStr(data.priority)
+        ? t('flowNode.priorityMeta', { priority: translateEnumValue(data.priority, t) || toStr(data.priority) })
+        : t('nodes.persona');
     case 'feature':
-      return toStr(data.status) || t('nodes.feature');
+      return translateEnumValue(data.status, t) || toStr(data.status) || t('nodes.feature');
     case 'dataEntity':
       return toStr(data.source) || t('nodes.dataEntity');
     case 'channel':
@@ -508,7 +571,9 @@ function getMetaLabel(kind: NodeKind, data: Record<string, unknown>, t: TFunctio
     case 'kpi':
       return toStr(data.unit) || t('nodes.kpi');
     case 'risk':
-      return toStr(data.impact) ? t('flowNode.impactMeta', { impact: toStr(data.impact) }) : t('nodes.risk');
+      return toStr(data.impact)
+        ? t('flowNode.impactMeta', { impact: translateEnumValue(data.impact, t) || toStr(data.impact) })
+        : t('nodes.risk');
   }
 }
 
@@ -561,8 +626,8 @@ function getDetailRows(kind: NodeKind, data: Record<string, unknown>, t: TFuncti
 
   if (kind === 'feature') {
     return [
-      { label: t('fields.priority'), value: toStr(data.priority) || t('flowNode.na') },
-      { label: t('fields.status'), value: toStr(data.status) || t('flowNode.na') },
+      { label: t('fields.priority'), value: translateEnumValue(data.priority, t) || toStr(data.priority) || t('flowNode.na') },
+      { label: t('fields.status'), value: translateEnumValue(data.status, t) || toStr(data.status) || t('flowNode.na') },
     ];
   }
 
@@ -589,8 +654,8 @@ function getDetailRows(kind: NodeKind, data: Record<string, unknown>, t: TFuncti
 
   if (kind === 'risk') {
     return [
-      { label: t('fields.impact'), value: toStr(data.impact) || t('flowNode.na') },
-      { label: t('fields.likelihood'), value: toStr(data.likelihood) || t('flowNode.na') },
+      { label: t('fields.impact'), value: translateEnumValue(data.impact, t) || toStr(data.impact) || t('flowNode.na') },
+      { label: t('fields.likelihood'), value: translateEnumValue(data.likelihood, t) || toStr(data.likelihood) || t('flowNode.na') },
     ];
   }
 
@@ -797,6 +862,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
     return Prism.highlight(source, grammar, codePrismLanguage);
   }, [isCode, codeContent, codePrismLanguage]);
   const milestonePriority = kind === 'milestone' ? toStr(data.priority).toLowerCase() : '';
+  const milestonePriorityLabel = (translateEnumValue(milestonePriority || 'medium', t) || 'medium').toUpperCase();
   const milestoneFlowCount = kind === 'milestone' ? getConnectedFlowNodeCount(page, id) : 0;
   const milestoneDueDate = kind === 'milestone' ? toStr(data.dueDate) : '';
   const isOverview = kind === 'overview';
@@ -1011,16 +1077,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
         : kind === 'milestone'
           ? 170
           : 170;
-  const brandSlotRadiusBase = BRAND_SLOT_GAP + (BRAND_SLOT_SIZE / 2);
-  const brandSlotRadiusX = (nodeWidth / 2) + brandSlotRadiusBase;
-  const brandSlotRadiusY = (previewHostHeight / 2) + brandSlotRadiusBase;
-  const brandAttachSlotOffsets = Array.from({ length: 6 }, (_, index) => {
-    const angle = (-Math.PI / 2) + ((Math.PI * 2 * index) / 6);
-    return {
-      dx: Math.round(brandSlotRadiusX * Math.cos(angle)),
-      dy: Math.round(brandSlotRadiusY * Math.sin(angle)),
-    };
-  });
+  const brandAttachSlotOffsets = getBrandAttachSlotOffsets(nodeWidth, previewHostHeight, BRAND_SLOT_SIZE, BRAND_SLOT_GAP);
 
   return (
     <>
@@ -1081,7 +1138,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
             }}
           >
             <Chip
-              label={(milestonePriority || 'medium').toUpperCase()}
+              label={milestonePriorityLabel}
               size="small"
               sx={{
                 height: 22,
@@ -1697,7 +1754,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                             </Box>
 
                             <Chip
-                              label={(item.priority || 'medium').toUpperCase()}
+                              label={(translateEnumValue(item.priority || 'medium', t) || 'medium').toUpperCase()}
                               size="small"
                               sx={{
                                 height: 22,
@@ -2098,7 +2155,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                   }}
                 >
                   <Typography sx={{ fontSize: 10, fontWeight: 700, color: '#b45309', letterSpacing: 0.4, mb: 0.3 }}>
-                    PAIN POINTS
+                    {t('flowNode.painPoints')}
                   </Typography>
                   <Typography sx={{ fontSize: 12.5, color: '#6b4c1a', lineHeight: 1.35 }}>
                     {compact(toStr(data.painPoints), 120)}
@@ -2127,7 +2184,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
               )}
               {/* Priority bar */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, mt: 0.3 }}>
-                <Typography sx={{ fontSize: 10, fontWeight: 700, color: '#8995a8', letterSpacing: 0.3 }}>PRIORITY</Typography>
+                <Typography sx={{ fontSize: 10, fontWeight: 700, color: '#8995a8', letterSpacing: 0.3 }}>{t('flowNode.priorityLabel')}</Typography>
                 <Box sx={{ flex: 1, height: 6, borderRadius: 3, bgcolor: '#eef1f5', overflow: 'hidden' }}>
                   <Box sx={{
                     height: '100%',
@@ -2142,30 +2199,38 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
             <>
               {/* Priority + Status badges */}
               <Stack direction="row" spacing={0.6} sx={{ mb: 0.9 }}>
-                <Chip
-                  label={toStr(data.priority).toUpperCase() || 'MUST'}
-                  size="small"
-                  sx={{
-                    height: 24,
-                    borderRadius: 999,
-                    bgcolor: toStr(data.priority) === 'must' ? '#fef2f2' : toStr(data.priority) === 'should' ? '#fff7ed' : toStr(data.priority) === 'could' ? '#eff6ff' : '#f8fafc',
-                    border: `1px solid ${toStr(data.priority) === 'must' ? '#fecaca' : toStr(data.priority) === 'should' ? '#fed7aa' : toStr(data.priority) === 'could' ? '#bfdbfe' : '#e2e8f0'}`,
-                    color: toStr(data.priority) === 'must' ? '#b91c1c' : toStr(data.priority) === 'should' ? '#c2410c' : toStr(data.priority) === 'could' ? '#1d4ed8' : '#64748b',
-                    '& .MuiChip-label': { px: 0.9, fontSize: 10.5, fontWeight: 800, letterSpacing: 0.3 },
-                  }}
-                />
-                <Chip
-                  label={toStr(data.status) || 'planned'}
-                  size="small"
-                  sx={{
-                    height: 24,
-                    borderRadius: 999,
-                    bgcolor: toStr(data.status) === 'done' ? '#ecfdf5' : toStr(data.status) === 'in-progress' ? '#eff6ff' : '#f8fafc',
-                    border: `1px solid ${toStr(data.status) === 'done' ? '#a7f3d0' : toStr(data.status) === 'in-progress' ? '#bfdbfe' : '#e2e8f0'}`,
-                    color: toStr(data.status) === 'done' ? '#065f46' : toStr(data.status) === 'in-progress' ? '#1e40af' : '#64748b',
-                    '& .MuiChip-label': { px: 0.9, fontSize: 10.5, fontWeight: 700 },
-                  }}
-                />
+                {(() => {
+                  const featurePriority = toStr(data.priority).toLowerCase();
+                  const featureStatus = toStr(data.status).toLowerCase();
+                  return (
+                    <>
+                      <Chip
+                        label={(translateEnumValue(featurePriority || 'must', t) || 'must').toUpperCase()}
+                        size="small"
+                        sx={{
+                          height: 24,
+                          borderRadius: 999,
+                          bgcolor: featurePriority === 'must' ? '#fef2f2' : featurePriority === 'should' ? '#fff7ed' : featurePriority === 'could' ? '#eff6ff' : '#f8fafc',
+                          border: `1px solid ${featurePriority === 'must' ? '#fecaca' : featurePriority === 'should' ? '#fed7aa' : featurePriority === 'could' ? '#bfdbfe' : '#e2e8f0'}`,
+                          color: featurePriority === 'must' ? '#b91c1c' : featurePriority === 'should' ? '#c2410c' : featurePriority === 'could' ? '#1d4ed8' : '#64748b',
+                          '& .MuiChip-label': { px: 0.9, fontSize: 10.5, fontWeight: 800, letterSpacing: 0.3 },
+                        }}
+                      />
+                      <Chip
+                        label={translateEnumValue(featureStatus || 'planned', t) || 'planned'}
+                        size="small"
+                        sx={{
+                          height: 24,
+                          borderRadius: 999,
+                          bgcolor: featureStatus === 'done' ? '#ecfdf5' : featureStatus === 'in-progress' ? '#eff6ff' : '#f8fafc',
+                          border: `1px solid ${featureStatus === 'done' ? '#a7f3d0' : featureStatus === 'in-progress' ? '#bfdbfe' : '#e2e8f0'}`,
+                          color: featureStatus === 'done' ? '#065f46' : featureStatus === 'in-progress' ? '#1e40af' : '#64748b',
+                          '& .MuiChip-label': { px: 0.9, fontSize: 10.5, fontWeight: 700 },
+                        }}
+                      />
+                    </>
+                  );
+                })()}
               </Stack>
               {/* Description */}
               {hasSummary && <MarkdownText text={summary} mb={0.7} />}
@@ -2200,7 +2265,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                 >
                   <Box sx={{ px: 1.1, py: 0.55, bgcolor: '#eef5f0', borderBottom: '1px solid #d1e0d5' }}>
                     <Typography sx={{ fontSize: 10.5, fontWeight: 700, color: '#3d6b4e', letterSpacing: 0.4 }}>
-                      ATTRIBUTES
+                      {t('flowNode.attributesLabel')}
                     </Typography>
                   </Box>
                   {toTags(data.attributes).slice(0, 6).map(attr => (
@@ -2292,7 +2357,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                 px: 1.2, py: 1, mb: 0.9, textAlign: 'center',
               }}>
                 <Typography sx={{ fontSize: 10, fontWeight: 700, color: '#ef4444', letterSpacing: 0.5, mb: 0.3 }}>
-                  TARGET
+                  {t('flowNode.targetLabel')}
                 </Typography>
                 <Typography sx={{ fontSize: 22, fontWeight: 800, color: '#991b1b', lineHeight: 1.1 }}>
                   {toStr(data.target) || 'TBD'}
@@ -2307,7 +2372,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
               {toStr(data.measurement) && (
                 <Box sx={{ mb: 0.6 }}>
                   <Typography sx={{ fontSize: 10, fontWeight: 700, color: '#8995a8', letterSpacing: 0.4, mb: 0.3 }}>
-                    MEASUREMENT
+                    {t('flowNode.measurementLabel')}
                   </Typography>
                   <Typography sx={{ fontSize: 12.5, color: '#4b5563', lineHeight: 1.35 }}>
                     {compact(toStr(data.measurement), 100)}
@@ -2327,26 +2392,38 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
             <>
               {/* Risk severity matrix badge */}
               <Stack direction="row" spacing={0.6} sx={{ mb: 0.9 }}>
-                <Box sx={{
-                  flex: 1, borderRadius: 1.8, px: 1, py: 0.65, textAlign: 'center',
-                  bgcolor: (priorityTone[toStr(data.impact)] ?? priorityTone.medium).bg,
-                  border: `1px solid ${(priorityTone[toStr(data.impact)] ?? priorityTone.medium).border}`,
-                }}>
-                  <Typography sx={{ fontSize: 9.5, fontWeight: 700, color: '#8995a8', letterSpacing: 0.4 }}>IMPACT</Typography>
-                  <Typography sx={{ fontSize: 13, fontWeight: 800, color: (priorityTone[toStr(data.impact)] ?? priorityTone.medium).color }}>
-                    {(toStr(data.impact) || 'medium').toUpperCase()}
-                  </Typography>
-                </Box>
-                <Box sx={{
-                  flex: 1, borderRadius: 1.8, px: 1, py: 0.65, textAlign: 'center',
-                  bgcolor: (priorityTone[toStr(data.likelihood)] ?? priorityTone.medium).bg,
-                  border: `1px solid ${(priorityTone[toStr(data.likelihood)] ?? priorityTone.medium).border}`,
-                }}>
-                  <Typography sx={{ fontSize: 9.5, fontWeight: 700, color: '#8995a8', letterSpacing: 0.4 }}>LIKELIHOOD</Typography>
-                  <Typography sx={{ fontSize: 13, fontWeight: 800, color: (priorityTone[toStr(data.likelihood)] ?? priorityTone.medium).color }}>
-                    {(toStr(data.likelihood) || 'medium').toUpperCase()}
-                  </Typography>
-                </Box>
+                {(() => {
+                  const impactLevel = toStr(data.impact).toLowerCase();
+                  const likelihoodLevel = toStr(data.likelihood).toLowerCase();
+                  const impactTone = priorityTone[impactLevel] ?? priorityTone.medium;
+                  const likelihoodTone = priorityTone[likelihoodLevel] ?? priorityTone.medium;
+                  const impactText = (translateEnumValue(impactLevel || 'medium', t) || 'medium').toUpperCase();
+                  const likelihoodText = (translateEnumValue(likelihoodLevel || 'medium', t) || 'medium').toUpperCase();
+                  return (
+                    <>
+                      <Box sx={{
+                        flex: 1, borderRadius: 1.8, px: 1, py: 0.65, textAlign: 'center',
+                        bgcolor: impactTone.bg,
+                        border: `1px solid ${impactTone.border}`,
+                      }}>
+                        <Typography sx={{ fontSize: 9.5, fontWeight: 700, color: '#8995a8', letterSpacing: 0.4 }}>{t('flowNode.impactLabel')}</Typography>
+                        <Typography sx={{ fontSize: 13, fontWeight: 800, color: impactTone.color }}>
+                          {impactText}
+                        </Typography>
+                      </Box>
+                      <Box sx={{
+                        flex: 1, borderRadius: 1.8, px: 1, py: 0.65, textAlign: 'center',
+                        bgcolor: likelihoodTone.bg,
+                        border: `1px solid ${likelihoodTone.border}`,
+                      }}>
+                        <Typography sx={{ fontSize: 9.5, fontWeight: 700, color: '#8995a8', letterSpacing: 0.4 }}>{t('flowNode.likelihoodLabel')}</Typography>
+                        <Typography sx={{ fontSize: 13, fontWeight: 800, color: likelihoodTone.color }}>
+                          {likelihoodText}
+                        </Typography>
+                      </Box>
+                    </>
+                  );
+                })()}
               </Stack>
               {/* Mitigation */}
               {toStr(data.mitigation) && (
@@ -2355,7 +2432,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                   px: 1.1, py: 0.7, mb: 0.7,
                 }}>
                   <Typography sx={{ fontSize: 10, fontWeight: 700, color: '#b45309', letterSpacing: 0.4, mb: 0.25 }}>
-                    MITIGATION
+                    {t('flowNode.mitigationLabel')}
                   </Typography>
                   <Typography sx={{ fontSize: 12.5, color: '#6b4c1a', lineHeight: 1.35 }}>
                     {compact(toStr(data.mitigation), 120)}
@@ -2364,7 +2441,7 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
               )}
               {/* Status pill */}
               <Chip
-                label={(toStr(data.status) || 'open').toUpperCase()}
+                label={(translateEnumValue(toStr(data.status) || 'open', t) || 'open').toUpperCase()}
                 size="small"
                 sx={{
                   height: 24,

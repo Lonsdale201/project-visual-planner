@@ -209,6 +209,11 @@ const COMMENT_ATTACH_RADIUS = 260;
 const BRAND_ATTACH_SLOT_COUNT = 6;
 const BRAND_ATTACH_SLOT_SIZE = 88;
 const BRAND_ATTACH_SLOT_GAP = 25;
+const BRAND_ATTACH_SLOT_SNAP_RADIUS = BRAND_ATTACH_SLOT_SIZE;
+const BRAND_ATTACH_SLOT_ANGLES = Array.from(
+  { length: BRAND_ATTACH_SLOT_COUNT },
+  (_, index) => (-Math.PI / 2) + ((Math.PI * 2 * index) / BRAND_ATTACH_SLOT_COUNT),
+);
 
 interface AttachNodeLike {
   id: string;
@@ -265,19 +270,33 @@ function centerOfAttachNode(node: AttachNodeLike): { x: number; y: number } {
   };
 }
 
-function getBrandSlotCenters(hostNode: AttachNodeLike): Array<{ x: number; y: number }> {
-  const center = centerOfAttachNode(hostNode);
-  const radiusBase = BRAND_ATTACH_SLOT_GAP + (BRAND_ATTACH_SLOT_SIZE / 2);
-  const radiusX = (estimateAttachNodeWidth(hostNode) / 2) + radiusBase;
-  const radiusY = (estimateAttachNodeHeight(hostNode) / 2) + radiusBase;
+function getBrandSlotOffsets(hostWidth: number, hostHeight: number): Array<{ dx: number; dy: number }> {
+  const halfWidth = hostWidth / 2;
+  const halfHeight = hostHeight / 2;
+  const slotPadding = BRAND_ATTACH_SLOT_GAP + (BRAND_ATTACH_SLOT_SIZE / 2);
 
-  return Array.from({ length: BRAND_ATTACH_SLOT_COUNT }, (_, index) => {
-    const angle = (-Math.PI / 2) + ((Math.PI * 2 * index) / BRAND_ATTACH_SLOT_COUNT);
+  return BRAND_ATTACH_SLOT_ANGLES.map(angle => {
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const absCos = Math.abs(cos);
+    const absSin = Math.abs(sin);
+    const distanceToVerticalEdge = absCos > 1e-6 ? (halfWidth + slotPadding) / absCos : Number.POSITIVE_INFINITY;
+    const distanceToHorizontalEdge = absSin > 1e-6 ? (halfHeight + slotPadding) / absSin : Number.POSITIVE_INFINITY;
+    const radius = Math.min(distanceToVerticalEdge, distanceToHorizontalEdge);
     return {
-      x: center.x + (radiusX * Math.cos(angle)),
-      y: center.y + (radiusY * Math.sin(angle)),
+      dx: radius * cos,
+      dy: radius * sin,
     };
   });
+}
+
+function getBrandSlotCenters(hostNode: AttachNodeLike): Array<{ x: number; y: number }> {
+  const center = centerOfAttachNode(hostNode);
+  const offsets = getBrandSlotOffsets(estimateAttachNodeWidth(hostNode), estimateAttachNodeHeight(hostNode));
+  return offsets.map(offset => ({
+    x: center.x + offset.dx,
+    y: center.y + offset.dy,
+  }));
 }
 
 function canAttachNodeToTarget(draggedNode: AttachNodeLike, targetNode: AttachNodeLike): boolean {
@@ -314,10 +333,13 @@ function findBrandAttachTargetId(draggedNode: AttachNodeLike, canvasNodes: Attac
     const effectiveCount = draggedAttachedTo === node.id ? Math.max(0, rawCount - 1) : rawCount;
     if (effectiveCount >= BRAND_ATTACH_SLOT_COUNT) continue;
 
-    const hostCenter = centerOfAttachNode(node);
-    const dx = hostCenter.x - draggedCenter.x;
-    const dy = hostCenter.y - draggedCenter.y;
-    const dist = Math.hypot(dx, dy);
+    const slotCenters = getBrandSlotCenters(node);
+    const dist = slotCenters.reduce((minDistance, slot) => {
+      const dx = slot.x - draggedCenter.x;
+      const dy = slot.y - draggedCenter.y;
+      const candidate = Math.hypot(dx, dy);
+      return Math.min(minDistance, candidate);
+    }, Number.POSITIVE_INFINITY);
     if (dist < bestDistance) {
       bestDistance = dist;
       bestTargetId = node.id;
@@ -325,7 +347,7 @@ function findBrandAttachTargetId(draggedNode: AttachNodeLike, canvasNodes: Attac
   }
 
   if (!bestTargetId) return null;
-  if (bestDistance > COMMENT_ATTACH_RADIUS) return null;
+  if (bestDistance > BRAND_ATTACH_SLOT_SNAP_RADIUS) return null;
   return bestTargetId;
 }
 
