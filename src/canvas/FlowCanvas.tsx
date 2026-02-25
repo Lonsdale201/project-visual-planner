@@ -465,6 +465,7 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
   const clipboardRef = useRef<ClipboardPayload | null>(null);
   const pasteCounterRef = useRef(0);
   const pendingSelectedNodeIdsRef = useRef<Set<string> | null>(null);
+  const draggingNodeIdsRef = useRef<Set<string>>(new Set());
   const attachPreviewFrameRef = useRef<number | null>(null);
   const pendingAttachPreviewIdRef = useRef<string | null>(null);
   const pendingAttachPreviewKindRef = useRef<NodeKind | null>(null);
@@ -819,9 +820,12 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
         const rfNew = storeNodesToRF([sn])[0];
         const existing = currentMap.get(sn.id);
         if (existing) {
+          const isBeingDragged = draggingNodeIdsRef.current.has(sn.id);
           return {
             ...existing,
-            position: rfNew.position,
+            // While dragging, keep React Flow's live position to avoid snap-back flicker
+            // when attach preview state changes re-run this sync effect.
+            position: isBeingDragged ? existing.position : rfNew.position,
             data: rfNew.data,
             type: rfNew.type,
             selected: pendingSelectedNodeIds ? pendingSelectedNodeIds.has(sn.id) : existing.selected,
@@ -1148,7 +1152,12 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
     setFocusNodeId(null);
   }, []);
 
-  const onNodeDrag = useCallback((_: React.MouseEvent, draggedNode: Node) => {
+  const onNodeDrag = useCallback((_: React.MouseEvent, draggedNode: Node, draggedNodes?: Node[]) => {
+    const draggingIds = (Array.isArray(draggedNodes) && draggedNodes.length > 0)
+      ? draggedNodes.map(node => node.id)
+      : [draggedNode.id];
+    draggingNodeIdsRef.current = new Set(draggingIds);
+
     const dragKind = isAttachableNode(draggedNode as AttachNodeLike) ? (draggedNode.type as NodeKind) : null;
     const nextTargetId = dragKind ? findAttachTargetId(draggedNode as AttachNodeLike, nodes as AttachNodeLike[]) : null;
     pendingAttachPreviewIdRef.current = nextTargetId;
@@ -1208,6 +1217,7 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
     setAttachPreviewTargetId(null);
     setAttachPreviewKind(null);
     pendingAttachPreviewKindRef.current = null;
+    draggingNodeIdsRef.current = new Set();
   }, [attachPreviewTargetId, nodes]);
 
   const onConnect = useCallback((connection: Connection) => {
@@ -1308,6 +1318,7 @@ export default function FlowCanvas({ showNodeNavigator = false }: FlowCanvasProp
     setNodeContextMenu(null);
     setAttachPreviewTargetId(null);
     setAttachPreviewKind(null);
+    draggingNodeIdsRef.current = new Set();
   }, []);
 
   // Keyboard delete (when canvas wrapper has focus)
