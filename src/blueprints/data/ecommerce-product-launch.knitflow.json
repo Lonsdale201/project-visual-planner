@@ -63,39 +63,48 @@
           "id": "feature-storefront",
           "type": "feature",
           "position": { "x": 80, "y": 480 },
-          "stylePreset": "blue",
+          "stylePreset": "cyclamen",
           "data": {
             "name": "Curated Storefront",
+            "tag": "UX",
             "description": "Clean, story-driven product pages with lifestyle photography, ingredient/material breakdowns, and social proof. Mobile-first design.",
             "priority": "must",
+            "complexity": "large",
             "status": "planned",
-            "userStory": "As a casual shopper, I want to quickly understand why this product is worth it so I can decide without reading 50 reviews."
+            "userStory": "As a casual shopper, I want to quickly understand why this product is worth it so I can decide without reading 50 reviews.",
+            "acceptanceCriteria": "- Mobile-first responsive layout\n- Product pages load < 2s\n- Lifestyle image gallery with zoom\n- Social proof section with review count\n- Add-to-cart visible without scrolling"
           }
         },
         {
           "id": "feature-subscription",
           "type": "feature",
           "position": { "x": 480, "y": 480 },
-          "stylePreset": "blue",
+          "stylePreset": "cyclamen",
           "data": {
             "name": "Subscribe & Save",
+            "tag": "Retention",
             "description": "Monthly subscription boxes with 10% discount. Customizable frequency and product selection. Skip/pause anytime.",
             "priority": "should",
+            "complexity": "medium",
             "status": "planned",
-            "userStory": "As a loyal customer, I want to auto-receive my favorites monthly so I never run out and save money."
+            "userStory": "As a loyal customer, I want to auto-receive my favorites monthly so I never run out and save money.",
+            "acceptanceCriteria": "- Subscription creation with product selection\n- Skip/pause/cancel self-service\n- 10% auto-discount applied\n- Renewal reminder email 3 days before charge"
           }
         },
         {
           "id": "feature-referral",
           "type": "feature",
           "position": { "x": 280, "y": 700 },
-          "stylePreset": "blue",
+          "stylePreset": "cyclamen",
           "data": {
             "name": "Referral Program",
+            "tag": "Growth",
             "description": "Give $10, get $10 referral system. Unique shareable links. Track referral conversions and reward payouts.",
             "priority": "should",
+            "complexity": "small",
             "status": "planned",
-            "userStory": "As a happy customer, I want to share a referral link with friends so we both benefit."
+            "userStory": "As a happy customer, I want to share a referral link with friends so we both benefit.",
+            "acceptanceCriteria": "- Unique referral link per customer\n- $10 credit applied on friend's first order\n- Referrer gets $10 credit after friend's order ships\n- Referral dashboard in account page"
           }
         },
         {

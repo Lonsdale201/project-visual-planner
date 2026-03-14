@@ -33,6 +33,7 @@ import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import PersonOutlinedIcon from '@mui/icons-material/PersonOutlined';
 import ExtensionOutlinedIcon from '@mui/icons-material/ExtensionOutlined';
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
 import CampaignOutlinedIcon from '@mui/icons-material/CampaignOutlined';
 import TrackChangesOutlinedIcon from '@mui/icons-material/TrackChangesOutlined';
@@ -64,9 +65,10 @@ const iconComponents: Record<string, React.ReactElement> = {
   CampaignOutlined: <CampaignOutlinedIcon />,
   TrackChangesOutlined: <TrackChangesOutlinedIcon />,
   WarningAmberOutlined: <WarningAmberOutlinedIcon />,
+  AutoAwesomeOutlined: <AutoAwesomeOutlinedIcon />,
 };
 
-const developmentCoreKinds: NodeKind[] = ['service', 'bridge', 'router', 'action', 'database', 'infra', 'framework', 'integration', 'brand', 'code'];
+const developmentCoreKinds: NodeKind[] = ['service', 'bridge', 'router', 'action', 'database', 'infra', 'framework', 'integration', 'brand', 'code', 'feature'];
 const developmentMetaKinds: NodeKind[] = ['overview', 'comment', 'spec', 'milestone'];
 const businessStrategyKinds: NodeKind[] = ['persona', 'feature', 'kpi'];
 const businessExecutionKinds: NodeKind[] = ['channel', 'dataEntity', 'brand', 'router'];

@@ -292,6 +292,25 @@
             "authMethod": "API Key",
             "requestNotes": "Optional public incident updates"
           }
+        },
+        {
+          "id": "feature-ai-summarize",
+          "type": "feature",
+          "position": {
+            "x": 460,
+            "y": 720
+          },
+          "stylePreset": "cyclamen",
+          "data": {
+            "name": "AI-Powered Summaries",
+            "tag": "AI",
+            "description": "Automatically generate concise summaries from item collections, activity logs, and user queries using the AI endpoint.",
+            "priority": "must",
+            "complexity": "medium",
+            "status": "planned",
+            "userStory": "As an API consumer, I want to request a summary of recent items so I can get a quick overview without reading each entry.",
+            "acceptanceCriteria": "- POST /ai/summarize returns coherent summary\n- Handles empty input gracefully\n- Response time < 3s for up to 50 items\n- Token usage tracked per request"
+          }
         }
       ],
       "edges": [
@@ -392,6 +411,13 @@
           "target": "integration-statuspage",
           "type": "smoothstep",
           "label": "optional status sync"
+        },
+        {
+          "id": "e-18",
+          "source": "service-ai",
+          "target": "feature-ai-summarize",
+          "type": "smoothstep",
+          "label": "implements"
         }
       ]
     }

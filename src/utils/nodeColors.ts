@@ -7,5 +7,6 @@ export const nodeColorMap: Record<NodeStylePreset, { bg: string; border: string;
   red:    { bg: '#ffffff', border: '#c55656', header: '#fdeeee', text: '#7b2a2a' },
   purple: { bg: '#ffffff', border: '#6e63c9', header: '#f1efff', text: '#3a3272' },
   grey:   { bg: '#ffffff', border: '#8a96a8', header: '#f2f5f9', text: '#3d4756' },
-  teal:   { bg: '#ffffff', border: '#218a8f', header: '#eaf7f7', text: '#145357' },
+  teal:     { bg: '#ffffff', border: '#218a8f', header: '#eaf7f7', text: '#145357' },
+  cyclamen: { bg: '#ffffff', border: '#c74b8f', header: '#fceef6', text: '#6b2450' },
 };

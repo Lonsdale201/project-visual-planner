@@ -139,21 +139,58 @@ function ensureFlowGraph(
   return { ui, pages };
 }
 
+/**
+ * Check whether a flow graph has any real content (at least one node on any page).
+ */
+function flowGraphHasContent(graph: FlowGraph | undefined): boolean {
+  if (!graph?.pages?.length) return false;
+  return graph.pages.some(p => Array.isArray(p.nodes) && p.nodes.length > 0);
+}
+
+function topLevelPagesHaveContent(pages: Page[] | undefined): boolean {
+  if (!Array.isArray(pages) || pages.length === 0) return false;
+  return pages.some(p => Array.isArray(p.nodes) && p.nodes.length > 0);
+}
+
 export function migrateProjectToFlowModel(project: Project): Project {
   const topLevelUi = ensureUi(project.ui);
   const topLevelPages = ensurePages(project.pages, 'Main');
   const requestedFlow: FlowMode = project.activeFlow === 'business' ? 'business' : 'development';
+  const topLevelHasContent = topLevelPagesHaveContent(project.pages);
+
+  // Determine the best page source for each flow:
+  // 1. If the flow graph already has real content → use it directly
+  // 2. If the flow graph exists but is empty AND top-level pages have content → use top-level pages
+  // 3. If no flows property at all → copy top-level pages into both flows
+  // 4. Otherwise → let ensureFlowGraph create a default empty page
+  const devGraph = project.flows?.development;
+  const bizGraph = project.flows?.business;
+
+  const devFallback = (!flowGraphHasContent(devGraph) && topLevelHasContent)
+    ? topLevelPages
+    : (requestedFlow === 'development' ? topLevelPages : undefined);
+
+  const bizFallback = (!flowGraphHasContent(bizGraph) && topLevelHasContent)
+    ? topLevelPages
+    : (requestedFlow === 'business' ? topLevelPages : undefined);
+
+  // If the flow graph exists but is empty and we have top-level content,
+  // pass undefined as graph so it falls through to the fallback pages.
+  const devGraphToUse = (devGraph && !flowGraphHasContent(devGraph) && topLevelHasContent)
+    ? undefined : devGraph;
+  const bizGraphToUse = (bizGraph && !flowGraphHasContent(bizGraph) && topLevelHasContent)
+    ? undefined : bizGraph;
 
   const development = ensureFlowGraph(
-    project.flows?.development,
+    devGraphToUse,
     topLevelUi,
-    requestedFlow === 'development' ? topLevelPages : undefined,
+    devFallback,
     'Development Main',
   );
   const business = ensureFlowGraph(
-    project.flows?.business,
+    bizGraphToUse,
     topLevelUi,
-    requestedFlow === 'business' ? topLevelPages : undefined,
+    bizFallback,
     'Business Main',
   );
 

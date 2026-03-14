@@ -374,6 +374,22 @@
             "dueDate": "2027-01-09",
             "priority": "high"
           }
+        },
+        {
+          "id": "feature-interactive-quiz",
+          "type": "feature",
+          "position": { "x": 100, "y": 1100 },
+          "stylePreset": "cyclamen",
+          "data": {
+            "name": "Interactive Quiz Engine",
+            "tag": "Assessment",
+            "description": "Timed quizzes with multiple question types (MCQ, true/false, fill-in), instant grading, retry logic, and certificate generation on pass.",
+            "priority": "must",
+            "complexity": "large",
+            "status": "planned",
+            "userStory": "As a student, I want to take quizzes after each module so I can validate my understanding before moving on.",
+            "acceptanceCriteria": "- Support MCQ and true/false question types\n- Timer displayed during attempt\n- Auto-submit on timeout\n- Score shown immediately after submission\n- Certificate PDF generated on passing grade\n- Retry limited to 3 attempts per quiz"
+          }
         }
       ],
       "edges": [
@@ -408,7 +424,8 @@
         { "id": "e-29", "source": "service-notify", "target": "milestone-3", "type": "smoothstep", "label": "deliverable" },
         { "id": "e-30", "source": "service-reporting", "target": "milestone-3", "type": "smoothstep", "label": "deliverable" },
         { "id": "e-31", "source": "action-cron-jobs", "target": "milestone-4", "type": "smoothstep", "label": "deliverable" },
-        { "id": "e-32", "source": "integration-zoom", "target": "milestone-4", "type": "smoothstep", "label": "deliverable" }
+        { "id": "e-32", "source": "integration-zoom", "target": "milestone-4", "type": "smoothstep", "label": "deliverable" },
+        { "id": "e-33", "source": "service-quiz", "target": "feature-interactive-quiz", "type": "smoothstep", "label": "implements" }
       ]
     }
   ]

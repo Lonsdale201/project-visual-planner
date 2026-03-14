@@ -593,6 +593,25 @@
               }
             ]
           }
+        },
+        {
+          "id": "feature-kanban-board",
+          "type": "feature",
+          "position": {
+            "x": 120,
+            "y": 720
+          },
+          "stylePreset": "cyclamen",
+          "data": {
+            "name": "Kanban Task Board",
+            "tag": "Workflow",
+            "description": "Drag-and-drop kanban board with customizable columns, assignee avatars, priority badges, and real-time sync across team members.",
+            "priority": "must",
+            "complexity": "large",
+            "status": "planned",
+            "userStory": "As a project manager, I want to drag tasks across columns so my team can visualize workflow status at a glance.",
+            "acceptanceCriteria": "- Columns: To Do, In Progress, Review, Done\n- Drag-and-drop updates task status\n- Optimistic UI with rollback on error\n- Assignee filter per board\n- Real-time updates via Supabase Realtime"
+          }
         }
       ],
       "edges": [
@@ -854,6 +873,13 @@
           "target": "stack-notify-channels",
           "type": "smoothstep",
           "label": "delivery channels"
+        },
+        {
+          "id": "e-44",
+          "source": "service-task",
+          "target": "feature-kanban-board",
+          "type": "smoothstep",
+          "label": "implements"
         }
       ]
     }

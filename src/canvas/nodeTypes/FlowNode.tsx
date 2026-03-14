@@ -15,6 +15,7 @@ import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import PersonOutlinedIcon from '@mui/icons-material/PersonOutlined';
 import ExtensionOutlinedIcon from '@mui/icons-material/ExtensionOutlined';
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
 import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
 import CampaignOutlinedIcon from '@mui/icons-material/CampaignOutlined';
 import TrackChangesOutlinedIcon from '@mui/icons-material/TrackChangesOutlined';
@@ -70,6 +71,7 @@ const iconMap: Record<string, React.ReactElement> = {
   CampaignOutlined: <CampaignOutlinedIcon sx={{ fontSize: 14 }} />,
   TrackChangesOutlined: <TrackChangesOutlinedIcon sx={{ fontSize: 14 }} />,
   WarningAmberOutlined: <WarningAmberOutlinedIcon sx={{ fontSize: 14 }} />,
+  AutoAwesomeOutlined: <AutoAwesomeOutlinedIcon sx={{ fontSize: 14 }} />,
 };
 
 const nodeTranslationKeyByKind: Record<NodeKind, TranslationKey> = {
@@ -139,9 +141,15 @@ const enumTranslationKeyByValue: Record<string, TranslationKey> = {
   should: 'enums.should',
   could: 'enums.could',
   wont: 'enums.wont',
+  idea: 'enums.idea',
   planned: 'enums.planned',
   'in-progress': 'enums.inProgress',
+  testing: 'enums.testing',
   done: 'enums.done',
+  trivial: 'enums.trivial',
+  small: 'enums.small',
+  large: 'enums.large',
+  epic: 'enums.epic',
   open: 'enums.open',
   mitigated: 'enums.mitigated',
   accepted: 'enums.accepted',
@@ -858,6 +866,17 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
   const stackActiveItem = stackItems[stackActiveIndex];
   const hasSummary = Boolean(summary.trim());
   const isDimmed = Boolean(data.__dimmed);
+  const isFeature = kind === 'feature';
+  const featureACRaw = isFeature ? toStr(data.acceptanceCriteria) : '';
+  const featureACExpanded = isFeature ? Boolean(data.acExpanded) : false;
+  const featureACLines = isFeature
+    ? featureACRaw.split('\n').map(l => l.replace(/^[-*]\s*/, '').trim()).filter(Boolean)
+    : [];
+  const hasFeatureAC = featureACLines.length > 0;
+  const featureACChecked: boolean[] = isFeature && Array.isArray(data.acChecked)
+    ? (data.acChecked as boolean[])
+    : featureACLines.map(() => false);
+  const featureComplexity = isFeature ? toStr(data.complexity) : '';
   const isCode = kind === 'code';
   const codeLanguage = isCode ? parseCodeLanguage(data.language) : 'typescript';
   const codePrismLanguage = codeLanguageToPrism(codeLanguage);
@@ -1041,6 +1060,21 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
     } catch {
       // noop
     }
+  };
+  const toggleFeatureAC = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!isFeature) return;
+    updateNodeData(id, { acExpanded: !featureACExpanded });
+  };
+  const toggleFeatureACItem = (event: React.MouseEvent, idx: number) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!isFeature) return;
+    const next = [...featureACChecked];
+    while (next.length < featureACLines.length) next.push(false);
+    next[idx] = !next[idx];
+    updateNodeData(id, { acChecked: next });
   };
   const toggleDbSchemaExpanded = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -2217,8 +2251,8 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
             </>
           ) : kind === 'feature' ? (
             <>
-              {/* Priority + Status badges */}
-              <Stack direction="row" spacing={0.6} sx={{ mb: 0.9 }}>
+              {/* Priority + Status + Complexity badges */}
+              <Stack direction="row" spacing={0.6} sx={{ mb: 0.9, flexWrap: 'wrap', gap: 0.5 }}>
                 {(() => {
                   const featurePriority = toStr(data.priority).toLowerCase();
                   const featureStatus = toStr(data.status).toLowerCase();
@@ -2242,12 +2276,26 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                         sx={{
                           height: 24,
                           borderRadius: 999,
-                          bgcolor: featureStatus === 'done' ? '#ecfdf5' : featureStatus === 'in-progress' ? '#eff6ff' : '#f8fafc',
-                          border: `1px solid ${featureStatus === 'done' ? '#a7f3d0' : featureStatus === 'in-progress' ? '#bfdbfe' : '#e2e8f0'}`,
-                          color: featureStatus === 'done' ? '#065f46' : featureStatus === 'in-progress' ? '#1e40af' : '#64748b',
+                          bgcolor: featureStatus === 'done' ? '#ecfdf5' : featureStatus === 'in-progress' ? '#eff6ff' : featureStatus === 'testing' ? '#fefce8' : featureStatus === 'idea' ? '#faf5ff' : '#f8fafc',
+                          border: `1px solid ${featureStatus === 'done' ? '#a7f3d0' : featureStatus === 'in-progress' ? '#bfdbfe' : featureStatus === 'testing' ? '#fde68a' : featureStatus === 'idea' ? '#e9d5ff' : '#e2e8f0'}`,
+                          color: featureStatus === 'done' ? '#065f46' : featureStatus === 'in-progress' ? '#1e40af' : featureStatus === 'testing' ? '#a16207' : featureStatus === 'idea' ? '#7c3aed' : '#64748b',
                           '& .MuiChip-label': { px: 0.9, fontSize: 10.5, fontWeight: 700 },
                         }}
                       />
+                      {featureComplexity && (
+                        <Chip
+                          label={(translateEnumValue(featureComplexity, t) || featureComplexity).toUpperCase()}
+                          size="small"
+                          sx={{
+                            height: 24,
+                            borderRadius: 999,
+                            bgcolor: featureComplexity === 'epic' ? '#fdf2f8' : featureComplexity === 'large' ? '#fff1f2' : featureComplexity === 'trivial' ? '#f0fdf4' : '#f8fafc',
+                            border: `1px solid ${featureComplexity === 'epic' ? '#fbcfe8' : featureComplexity === 'large' ? '#fecdd3' : featureComplexity === 'trivial' ? '#bbf7d0' : '#e2e8f0'}`,
+                            color: featureComplexity === 'epic' ? '#be185d' : featureComplexity === 'large' ? '#be123c' : featureComplexity === 'trivial' ? '#166534' : '#64748b',
+                            '& .MuiChip-label': { px: 0.9, fontSize: 10, fontWeight: 700, letterSpacing: 0.2 },
+                          }}
+                        />
+                      )}
                     </>
                   );
                 })()}
@@ -2267,6 +2315,88 @@ export default function FlowNode({ id, data, selected }: FlowNodeProps) {
                     {compact(toStr(data.userStory), 140)}
                   </Typography>
                 </Box>
+              )}
+              {/* Acceptance Criteria — compact expandable */}
+              {hasFeatureAC && (
+                <Stack spacing={0.5} sx={{ mt: 0.8 }}>
+                  <Stack direction="row" alignItems="center" spacing={0.5}>
+                    <Tooltip title={featureACExpanded ? t('flowNode.hideAC') : `${t('flowNode.showAC')} (${featureACLines.length})`}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={toggleFeatureAC}
+                        sx={{
+                          minWidth: 0,
+                          px: 0.9,
+                          py: 0.2,
+                          height: 22,
+                          textTransform: 'none',
+                          fontWeight: 800,
+                          fontSize: 10,
+                          borderRadius: 1.4,
+                          borderColor: featureACExpanded ? colors.border : '#d1d5db',
+                          color: featureACExpanded ? colors.border : '#6b7280',
+                          bgcolor: featureACExpanded ? alpha(colors.border, 0.08) : 'transparent',
+                          '&:hover': { bgcolor: alpha(colors.border, 0.12), borderColor: colors.border },
+                        }}
+                      >
+                        {t('flowNode.showAC')} ({featureACLines.length})
+                      </Button>
+                    </Tooltip>
+                  </Stack>
+                  {featureACExpanded && (
+                    <Box
+                      sx={{
+                        borderRadius: 1.6,
+                        border: `1px solid ${alpha(colors.border, 0.25)}`,
+                        bgcolor: alpha(colors.border, 0.04),
+                        px: 1,
+                        py: 0.6,
+                      }}
+                    >
+                      {featureACLines.map((line, idx) => {
+                        const checked = featureACChecked[idx] ?? false;
+                        return (
+                          <Stack key={idx} direction="row" spacing={0.6} alignItems="flex-start" sx={{ py: 0.2 }}>
+                            <Box
+                              onClick={(e) => toggleFeatureACItem(e, idx)}
+                              sx={{
+                                width: 14,
+                                height: 14,
+                                minWidth: 14,
+                                mt: '1px',
+                                borderRadius: '3px',
+                                border: `1.5px solid ${checked ? colors.border : alpha(colors.border, 0.5)}`,
+                                bgcolor: checked ? colors.border : '#fff',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                transition: 'all 0.15s ease',
+                                '&:hover': { borderColor: colors.border, bgcolor: checked ? colors.border : alpha(colors.border, 0.12) },
+                              }}
+                            >
+                              {checked && (
+                                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                                  <path d="M2 5.5L4 7.5L8 3" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                              )}
+                            </Box>
+                            <Typography sx={{
+                              fontSize: 11.5,
+                              color: checked ? '#9ca3af' : '#374151',
+                              lineHeight: 1.4,
+                              textDecoration: checked ? 'line-through' : 'none',
+                              transition: 'all 0.15s ease',
+                            }}>
+                              {line}
+                            </Typography>
+                          </Stack>
+                        );
+                      })}
+                    </Box>
+                  )}
+                </Stack>
               )}
             </>
           ) : kind === 'dataEntity' ? (

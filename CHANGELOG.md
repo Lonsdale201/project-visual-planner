@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.1.2 - 2026-03-14
+
+### New
+- **Feature Node** — new dedicated node type with cyclamen color preset, MoSCoW priority, complexity estimation, user story, and an expandable acceptance criteria checklist with interactive checkboxes (toggle to track completion directly on the canvas).
+- Feature node available in both Development (Core group) and Business flow palettes.
+- Added Feature node examples to all 5 blueprint presets.
+
+### Fix
+- Fixed project import failing silently on certain files: when a `.knitflow.json` had a `flows.development` key with empty pages alongside populated top-level `pages`, the migrator would use the empty flow graph and discard actual content. The importer now detects empty flow graphs and falls back to top-level page data.
+- Import now uses soft validation — if strict schema check fails but the JSON structurally looks like a valid project, migration is still attempted instead of rejecting outright.
+
 ## 2.1.1 - 2026-02-25
 
 ### New

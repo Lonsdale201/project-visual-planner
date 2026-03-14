@@ -37,7 +37,8 @@ export type NodeStylePreset =
   | 'red'
   | 'purple'
   | 'grey'
-  | 'teal';
+  | 'teal'
+  | 'cyclamen';
 
 // ── Node data payloads (per kind) ──
 
@@ -207,10 +208,13 @@ export interface PersonaData {
 
 export interface FeatureData {
   name: string;
+  tag: string;
   description: string;
   priority: 'must' | 'should' | 'could' | 'wont';
-  status: 'planned' | 'in-progress' | 'done';
+  complexity: 'trivial' | 'small' | 'medium' | 'large' | 'epic';
+  status: 'idea' | 'planned' | 'in-progress' | 'testing' | 'done';
   userStory: string;
+  acceptanceCriteria: string;
 }
 
 export interface DataEntityData {

@@ -63,39 +63,48 @@
           "id": "feature-dashboard",
           "type": "feature",
           "position": { "x": 120, "y": 500 },
-          "stylePreset": "blue",
+          "stylePreset": "cyclamen",
           "data": {
             "name": "Live Operations Dashboard",
+            "tag": "Core Product",
             "description": "Real-time cross-team dashboard that aggregates project status, blockers, and KPIs from connected tools into one view.",
             "priority": "must",
+            "complexity": "large",
             "status": "planned",
-            "userStory": "As an Ops Lead, I want to see all team progress in one dashboard so I can skip the Monday status meeting."
+            "userStory": "As an Ops Lead, I want to see all team progress in one dashboard so I can skip the Monday status meeting.",
+            "acceptanceCriteria": "- Aggregates data from 3+ connected tools\n- Updates within 60 seconds of source change\n- Customizable widget layout\n- Mobile-responsive"
           }
         },
         {
           "id": "feature-integrations",
           "type": "feature",
           "position": { "x": 520, "y": 500 },
-          "stylePreset": "blue",
+          "stylePreset": "cyclamen",
           "data": {
             "name": "One-Click Integrations",
+            "tag": "Integrations",
             "description": "Pre-built connectors for Slack, Jira, Linear, Notion, and Google Sheets. Zero-config setup with OAuth.",
             "priority": "must",
+            "complexity": "epic",
             "status": "planned",
-            "userStory": "As a team member, I want my existing tools to sync automatically so I don't have to manually update another system."
+            "userStory": "As a team member, I want my existing tools to sync automatically so I don't have to manually update another system.",
+            "acceptanceCriteria": "- OAuth connect flow for each provider\n- Bi-directional sync for status fields\n- < 2 min setup per integration\n- Disconnect/reconnect without data loss"
           }
         },
         {
           "id": "feature-reports",
           "type": "feature",
           "position": { "x": 320, "y": 720 },
-          "stylePreset": "blue",
+          "stylePreset": "cyclamen",
           "data": {
             "name": "Weekly Digest & Reports",
+            "tag": "Reporting",
             "description": "Auto-generated weekly summaries sent via email/Slack. Highlights blockers, completed milestones, and trending KPIs.",
             "priority": "should",
+            "complexity": "medium",
             "status": "planned",
-            "userStory": "As an Ops Lead, I want an automatic weekly report so I can share progress with leadership without manual work."
+            "userStory": "As an Ops Lead, I want an automatic weekly report so I can share progress with leadership without manual work.",
+            "acceptanceCriteria": "- Weekly email sent every Monday 9am\n- Slack summary posted to selected channel\n- Includes top 3 blockers and completed items\n- PDF export option"
           }
         },
         {

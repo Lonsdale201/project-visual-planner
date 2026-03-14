@@ -224,7 +224,7 @@ function NodeInspector() {
       }
 
       const value = parsed as Record<string, unknown>;
-      const stylePresets: NodeStylePreset[] = ['blue', 'green', 'orange', 'red', 'purple', 'grey', 'teal'];
+      const stylePresets: NodeStylePreset[] = ['blue', 'green', 'orange', 'red', 'purple', 'grey', 'teal', 'cyclamen'];
 
       const patch: {
         data?: Record<string, unknown>;
